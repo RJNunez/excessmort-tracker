@@ -1,0 +1,12 @@
+# -- Libraries
+library(directlabels)
+library(shinythemes)
+library(excessmort)
+library(lubridate)
+library(tidyverse)
+library(gridExtra)
+library(scales)
+library(shiny)
+library(DT)
+library(sf)
+source("theme_slate.R")
