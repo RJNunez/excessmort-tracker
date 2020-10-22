@@ -4,6 +4,7 @@ library(data.table)
 library(tidyverse)
 library(lubridate)
 library(readxl)
+load("rda/counts-usa.rda")
 
 # -- Retrieving mortality data from FT
 url <- "https://raw.githubusercontent.com/Financial-Times/coronavirus-excess-mortality-data/master/data/ft_excess_deaths.csv"
@@ -15,7 +16,7 @@ dat <- fread(url) %>%
 # out <- c("Brazil")
 
 # -- Subsetting data. Only considering country level data for now
-dat <- filter(dat, country == region, !country %in% out) %>%
+dat <- filter(dat, country == region) %>%
   select(date, deaths, expected_deaths, country) %>%
   rename(outcome = deaths) %>%
   mutate(country = case_when(country=="US" ~ "United States of America",
@@ -124,7 +125,34 @@ eudat <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
 
 # -- All countries
 excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date", "country"))
- 
+
+
+# -- Using CDC usa data (percent change)
+usa_temp <- percent_change_usa %>%
+  filter(type == "CDC weighted") %>%
+  mutate(lwr = fitted - 1.96 * se, 
+         upr = fitted + 1.96 * se) %>%
+  select(date, expected, observed, fitted, se, lwr, upr) %>%
+  mutate(country = "United States")
+
+# -- Using CDC usa data (excess deaths)
+ed_temp <- excess_deaths_usa %>%
+  filter(type == "CDC weighted") %>%
+  mutate(lwr = fitted - 1.96 * se, 
+         upr = fitted + 1.96 * se) %>%
+  select(date, observed, sd, fitted, se, lwr, upr) %>%
+  mutate(country = "United States")
+
+# -- Adding it to percent change
+percent_change_countries <- percent_change_countries %>%
+  filter(country != "United States of America") %>%
+  bind_rows(usa_temp)
+
+# -- Adding it to excess deaths
+excess_deaths_countries <- excess_deaths_countries %>%
+  filter(country != "United States of America") %>%
+  bind_rows(ed_temp)
+
 # -- Save
 save(percent_change_countries, excess_deaths_countries, file = "rda/ft_counts.rda", compress = "xz")
 

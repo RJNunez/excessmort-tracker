@@ -48,7 +48,7 @@ population <- dat %>%
 
 # -- Putting everything together
 counts <- outcomes %>%
-  filter(agegroup != "0-14") %>%
+  # filter(agegroup != "0-14") %>%
   left_join(population, by = c("date", "sex", "country_code", "agegroup")) %>%
   left_join(countries, by = "country_code") %>%
   mutate(group = paste0(country, " | ", sex, " | ", agegroup)) %>%

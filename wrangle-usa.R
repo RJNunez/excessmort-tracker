@@ -201,4 +201,4 @@ excess_deaths_usa <- excess_deaths %>%
 
 # -- Saving 
 save(percent_change, percent_change_usa, excess_deaths, excess_deaths_usa, 
-     file = "rda/covid19-usa.rda", compress = "xz")
+     file = "rda/counts-usa.rda", compress = "xz")
