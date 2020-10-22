@@ -22,7 +22,17 @@ shinyServer(function(input, output) {
     # -- Used to determine y-axis
     y_limits <- range(states_dat$fitted)
     
-
+    # -- Used to determine x-axis
+    x_limits <- range(states_dat$date)
+    if(x_limits[2] - x_limits[1] <= 30){ 
+      freq  <- "week"
+      edays <- weeks(2)
+    } else{ 
+      freq  <- "month"
+      edays <- months(2)
+    }
+    
+    # -- Making Viz
     states_dat %>%
       ggplot(aes(date, fitted, label=state, color=state)) +
       geom_hline(yintercept = 0, color="#525252", lty=2) +
@@ -34,31 +44,15 @@ shinyServer(function(input, output) {
       coord_cartesian(ylim = c(y_limits[1], y_limits[2])) +
       scale_y_continuous(label = scales::percent, 
                          breaks = seq(y_limits[1], y_limits[2], by=round((y_limits[2]-y_limits[1]) / 10, 5))) +
-      scale_x_date(date_labels = "%b %Y", 
-                   limits = c(input$range[1], input$range[2] + weeks(6))) +
+      scale_x_date(date_labels = "%b %d %Y", 
+                   breaks = round_date(seq(x_limits[1], x_limits[2] + edays, length.out = 6), unit = freq),
+                   limits = c(input$range[1], input$range[2] + edays)) +
       scale_color_manual(name = "",
                          values = my_palette) +
       scale_fill_manual(name = "",
                         values = my_palette) +
       theme_slate()
-    
-    # ggplot() +
-    #   geom_hline(yintercept = 0, color="#525252", lty=2) +
-    #   geom_line(aes(date, fitted, group=state), color="#969696", size=0.10, alpha=0.50, data = filter(percent_change, type == "weighted", date >= input$range[1], date <= input$range[2])) +
-    #   geom_line(aes(date, fitted, color=state), show.legend = FALSE, data = states_dat) +
-    #   geom_dl(aes(date, fitted, label=state, color=state), method=list("smart.grid", fontfamily="Helvetica", cex=1.5), data = last_dp) +
-    #   ylab("Percent change from average mortality") +
-    #   xlab("Date") +
-    #   coord_cartesian(ylim = c(y_limits[1], y_limits[2])) +
-    #   scale_y_continuous(label = scales::percent, 
-    #                      breaks = seq(y_limits[1], y_limits[2], by=round((y_limits[2]-y_limits[1]) / 10, 5))) +
-    #   scale_x_date(date_labels = "%b %Y") +
-    #   scale_color_manual(name = "",
-    #                      values = my_palette) +
-    #   scale_fill_manual(name = "",
-    #                     values = my_palette) +
-    #   theme_slate()
-  })
+})
   
   output$percent_changeV2 <- renderPlot({
     
@@ -99,7 +93,12 @@ shinyServer(function(input, output) {
 })
 
 
+# floor((x_limits[2] - x_limits[1]) / 30)
+# seq(x_limits[1], x_limits[2], floor((x_limits[2] - x_limits[1]) / 5))
 # 
+# 
+# round_date(seq(x_limits[1], x_limits[2], floor((x_limits[2] - x_limits[1]) / 5)), unit = "month")
+
 # temp_states <- c("Massachusetts", "Florida", "Texas", "Arkansas", "New York City")
 # states_dat  <- percent_change %>%
 #   filter(date >= "2020-01-01") %>%
@@ -111,6 +110,11 @@ shinyServer(function(input, output) {
 #   group_by(state) %>%
 #   filter(date == max(date))
 # y_limits <- range(states_dat$fitted)
+# x_limits <- range(states_dat$date)
+# 
+# 
+# if(x_limits[2] - x_limits[1] <= 30){ freq <- "week" } else { freq <- "month" }
+# if(x_limits[2] - x_limits[1] > 30){ freq <- "month" }
 # 
 # states_dat %>%
 #   ggplot(aes(date, fitted, label=state, color=state)) +
@@ -121,7 +125,8 @@ shinyServer(function(input, output) {
 #   xlab("Date") +
 #   scale_y_continuous(label = scales::percent,
 #                      breaks = seq(y_limits[1], y_limits[2], by=round((y_limits[2]-y_limits[1]) / 10, 5))) +
-#   scale_x_date(date_labels = "%b %Y") +
+#   scale_x_date(date_labels = "%b %Y %d ",
+#                breaks = floor_date(seq(x_limits[1], x_limits[2], floor((x_limits[2] - x_limits[1]) / 10)), unit = freq)) +
 #   coord_cartesian(ylim = c(y_limits[1], y_limits[2])) +
 #   scale_color_manual(name = "",
 #                      values = my_palette) +
