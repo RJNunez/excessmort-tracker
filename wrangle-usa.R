@@ -200,5 +200,5 @@ excess_deaths_usa <- excess_deaths %>%
   mutate(type = ifelse(type == "weighted", "CDC weighted", "CDC unweighted"))
 
 # -- Saving 
-save(percent_change, percent_change_usa, excess_deaths, excess_deaths_usa, 
+save(covid_states, percent_change, percent_change_usa, excess_deaths, excess_deaths_usa, 
      file = "rda/counts-usa.rda", compress = "xz")

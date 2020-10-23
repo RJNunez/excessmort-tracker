@@ -91,7 +91,7 @@ excess_deaths_countries <- map_df(countries, function(x){
                             
                             excess_model(.,
                                          start                = make_date(2020, 03, 01),
-                                         end                  = make_date(2020, 05, 31),
+                                         end                  = today(),
                                          exclude              = exclude,
                                          control.dates        = control_dates,
                                          aic            = FALSE, 
