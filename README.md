@@ -1,1 +1,1 @@
-# covid19-usa
+# Excess Mortality Tracker
