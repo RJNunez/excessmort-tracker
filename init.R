@@ -1,5 +1,6 @@
 # -- Libraries
 library(directlabels)
+library(shinyWidgets)
 library(shinythemes)
 library(excessmort)
 library(lubridate)
@@ -10,3 +11,5 @@ library(shiny)
 library(DT)
 library(sf)
 source("theme_slate.R")
+source("theme_sandstone.R")
+my_palette <- c("#252525", "#cb181d", "#2171b5", "#6a51a3", "#238b45", "#6a51a3")

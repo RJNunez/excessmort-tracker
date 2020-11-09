@@ -12,9 +12,6 @@ dat <- fread(url) %>%
   as_tibble() %>%
   mutate(date = ymd(date))
 
-# # -- Countries to take out because of insuficient data
-# out <- c("Brazil")
-
 # -- Subsetting data. Only considering country level data for now
 dat <- filter(dat, country == region) %>%
   select(date, deaths, expected_deaths, country) %>%
@@ -124,8 +121,8 @@ eudat <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
   select(date, country, deaths, covid19)
 
 # -- All countries
-excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date", "country"))
-
+excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date", "country")) %>%
+  select(-deaths)
 
 # -- Using CDC usa data (percent change)
 usa_temp <- percent_change_usa %>%
@@ -136,12 +133,13 @@ usa_temp <- percent_change_usa %>%
   mutate(country = "United States")
 
 # -- Using CDC usa data (excess deaths)
+colnames(excess_deaths_countries)
 ed_temp <- excess_deaths_usa %>%
   filter(type == "CDC weighted") %>%
   mutate(lwr = fitted - 1.96 * se, 
          upr = fitted + 1.96 * se) %>%
-  select(date, observed, sd, fitted, se, lwr, upr) %>%
-  mutate(country = "United States")
+  mutate(country = "United States") %>%
+  select(date, observed, sd, fitted, se, country, lwr, upr, covid19)
 
 # -- Adding it to percent change
 percent_change_countries <- percent_change_countries %>%
@@ -153,6 +151,27 @@ excess_deaths_countries <- excess_deaths_countries %>%
   filter(country != "United States of America") %>%
   bind_rows(ed_temp)
 
-# -- Save
-save(percent_change_countries, excess_deaths_countries, file = "rda/ft_counts.rda", compress = "xz")
+percent_change_countries <- rename(percent_change_countries, jurisdiction = country)
+excess_deaths_countries <- rename(excess_deaths_countries, jurisdiction = country)
+world_counts <- rename(counts, jurisdiction = country)
 
+# -- World counts
+counts_tmp <- cdc_counts %>%
+  group_by(date) %>%
+  summarize(outcome    = sum(outcome), 
+            population = sum(population)) %>%
+  ungroup() %>%
+  mutate(jurisdiction = "United States") %>%
+  select(date, outcome, jurisdiction, population)
+world_counts <- world_counts %>%
+  filter(jurisdiction != "United States of America") %>%
+  select(-expected_deaths) %>%
+  bind_rows(counts_tmp)
+world_counts <- eudat %>%
+  mutate(country = ifelse(country == "United States of America", "United States", country)) %>%
+  select(-deaths) %>%
+  right_join(world_counts, by = c("date", "country" = "jurisdiction")) %>%
+  rename(jurisdiction = country)
+
+# -- Save
+save(world_counts, percent_change_countries, excess_deaths_countries, file = "rda/ft_counts.rda", compress = "xz")

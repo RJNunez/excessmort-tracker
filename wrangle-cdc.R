@@ -78,26 +78,64 @@ dat <- RSocrata::read.socrata(
   mutate_at(c("observed_number",  "excess_lower_estimate", "excess_higher_estimate"), as.numeric) %>% 
   filter(replace_na(suppress, "") != "Suppressed (counts 1-9)") %>%
   select("week_ending_date", "state", "observed_number", "type", "outcome", "excess_lower_estimate", "excess_higher_estimate") %>%
-  setNames(c("date", "state", "outcome",  "type", "cause", "cdc_lower_estimate", "cdc_higher_estimate")) %>%
+  setNames(c("date", "jurisdiction", "outcome",  "type", "cause", "cdc_lower_estimate", "cdc_higher_estimate")) %>%
   mutate(date = ymd(date)) %>%
-  arrange(state, date) %>%
-  mutate(abb = state.abb[match(state, state.name)]) %>%
+  arrange(jurisdiction, date) %>%
+  mutate(abb = state.abb[match(jurisdiction, state.name)]) %>%
   filter(cause == "All causes",
          !is.na(outcome),
          !is.na(date)) %>%
-  select(state, date, type, outcome) %>%
+  select(jurisdiction, date, type, outcome) %>%
   pivot_wider(names_from = type, values_from = outcome) %>%
-  setNames(c("state", "date", "outcome", "outcome_unweighted"))
+  setNames(c("jurisdiction", "date", "outcome", "outcome_unweighted"))
 
 # -- Getting rid of the US since its just the sum of all the states
-dat <- filter(dat, state != "United States")
-dat <- dat %>% left_join(pop_states, by = c("state","date")) %>% select(-year)
-dat <- dat %>% mutate(state = ifelse(state == "New York", "New York (not including NYC)", state))
+dat <- filter(dat, jurisdiction != "United States")
+dat <- dat %>% left_join(pop_states, by = c("jurisdiction"="state","date")) %>% select(-year)
+dat <- dat %>% mutate(jurisdiction = ifelse(jurisdiction == "New York", "New York (not including NYC)", jurisdiction))
+
+# -- Expand state abbrevaition objects 
+state.name.2 <- c(state.name, "New York City", "Puerto Rico", "District of Columbia")
+state.abb.2  <- c(state.abb, "NYC", "PR", "DC")
+
+# -- Importing covd-19 reported deaths data 
+covid_nyc    <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv")
+covid_nyc    <- filter(covid_nyc, county =="New York City")
+covid_states <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv") %>%
+  mutate(abb = state.abb.2[match(state, state.name.2)]) %>%
+  mutate(date = ymd(date)) %>%
+  filter(!is.na(state)) %>%
+  arrange(state) %>%
+  rename(jurisdiction = state)
+
+# -- Subsetting new york data
+ny <- filter(covid_states, jurisdiction == "New York")
+
+# -- Covid 19 data for the rest of new york
+ny <- left_join(ny, covid_nyc, by = "date") %>%
+  mutate(death = deaths.x - deaths.y, 
+         jurisdiction = "Rest of New York") %>%
+  select(date, jurisdiction, death)
+
+# -- Covid 19 data for states
+covid_states <- filter(covid_states, jurisdiction!="New York") %>%
+  rename(death = deaths) %>%
+  select(date, jurisdiction, death)
+
+# -- Covid 19 for NYC
+covid_nyc <- covid_nyc %>%
+  mutate(jurisdiction = "New York City", death = deaths)%>%
+  select(date, jurisdiction, death)
+
+# -- Putting data together
+covid_states <- bind_rows(covid_states, ny, covid_nyc) %>%
+  filter(!is.na(death))
+rm(covid_nyc, ny)
 
 # -- Renaming
-cdc_counts <- dat
+cdc_counts <- covid_states %>%
+  rename(covid19 = death) %>%
+  right_join(dat, by = c("date", "jurisdiction"))
 
 # -- Saving 
 save(cdc_counts, file = "rda/cdc_counts.rda", compress = "xz")
-
-
