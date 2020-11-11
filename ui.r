@@ -20,8 +20,8 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     # -- Background color of UI
     setBackgroundColor(color = "#F8F5F0"),
 
-    # -- TO DO: Google analytics add on
-    # tags$head(includeHTML(("google-analytics.html"))),
+    # -- Google analytics add on
+    tags$head(includeHTML(("google-analytics.html"))),
     
     # -- Header space
     br(),br(),
