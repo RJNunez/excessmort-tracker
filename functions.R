@@ -1,7 +1,6 @@
 ##
 get_excess_deaths <- function(dat, start, end)
 {
-  print("EXCESS: A")
   # -- Dates to exclude when computing expected mortality
   flu_season    <- seq(make_date(2017, 12, 16), make_date(2018, 1, 16), by = "day")
   exclude_dates <- c(flu_season, seq(make_date(2020, 1, 1), today(), by = "day"))
@@ -20,7 +19,6 @@ get_excess_deaths <- function(dat, start, end)
   # -- Getting rid of bad data
   dat <- filter(dat, !jurisdiction %in% c("Connecticut", "North Carolina", "Italy"))
   
-  print("EXCESS: B")
   # -- Jurisdictions 
   jurs <- unique(dat$jurisdiction)
   
@@ -31,10 +29,8 @@ get_excess_deaths <- function(dat, start, end)
     nknots <- ceiling(knots/2)
   }
   
-  print("EXCESS: C")
   # -- Computing excess deaths
   eds <- map_df(jurs, function(x){
-    print(x)
     
     fit <- dat %>%
       filter(jurisdiction == x) %>%
@@ -150,7 +146,6 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     y_limits <- range(jurisdiction_dat$fitted)
     edays    <- weeks(2)
     
-    print("A")
     # -- Making Viz
     p <- jurisdiction_dat %>%
       ggplot(aes(date, fitted, label=jurisdiction, color=jurisdiction)) +
@@ -172,7 +167,6 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     
     if(ci_ind == "Yes")
     {
-      print("B")
       p <- p + 
         geom_ribbon(aes(ymin = lwr, ymax = upr, fill=jurisdiction), color=NA, alpha=0.50, show.legend = FALSE, data= jurisdiction_dat) +
         scale_fill_manual(name = "",
@@ -183,7 +177,6 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     y_limits <- range(jurisdiction_dat$fitted100)
     edays    <- weeks(2)
   
-    print("C")
     # -- Making Viz
     p <- jurisdiction_dat %>%
       ggplot(aes(date, fitted100, color=jurisdiction)) +
@@ -205,15 +198,11 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     
     if(ci_ind == "Yes")
     {
-      print("D")
       p <- p + 
         geom_ribbon(aes(ymin = lwr100, ymax = upr100, fill=jurisdiction), color=NA, alpha=0.50, show.legend = FALSE, data= jurisdiction_dat) +
         scale_fill_manual(name = "",
                           values = my_palette)
     }
-    
   }
-  
-  
   return(p)
 }
