@@ -3,8 +3,8 @@ source("functions.R")
 load("rda/cdc_counts.rda")
 load("rda/counts-usa.rda")
 load("rda/ft_counts.rda")
-states     <- unique(percent_change$jurisdiction)
-countries  <- unique(percent_change_countries$jurisdiction)
+states     <- sort(unique(percent_change$jurisdiction))
+countries  <- sort(unique(percent_change_countries$jurisdiction))
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
@@ -36,10 +36,10 @@ shinyServer(function(input, output, session) {
   })
 
   # -- Reactive dataset for excess deaths in US states
-  reactive_excess_deaths_usa <- reactive({ get_excess_deaths(dat = cdc_counts, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
+  reactive_excess_deaths_usa <- reactive({ get_excess_deaths(dat = cdc_counts, jurisdictions = input$state_edeaths, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
   
   # -- Reactive dataset for excess deaths in Countries
-  reactive_excess_deaths_countries <- reactive({ get_excess_deaths(dat = world_counts, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
+  reactive_excess_deaths_countries <- reactive({ get_excess_deaths(dat = world_counts, jurisdictions = input$countries_edeaths, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
   
   # -- Reactive dataset for excess deaths in both
   reactive_excess_deaths_both <- reactive({ 
@@ -47,7 +47,7 @@ shinyServer(function(input, output, session) {
     tmp <- select(cdc_counts, -outcome_unweighted) %>%
       bind_rows(world_counts)
     
-    get_excess_deaths(dat = tmp, start = input$range_both_edeaths[1], end = input$range_both_edeaths[2])
+    get_excess_deaths(dat = tmp, jurisdictions = input$both_edeaths, start = input$range_both_edeaths[1], end = input$range_both_edeaths[2])
     })
   
   # -- Excess deaths plot for US states  

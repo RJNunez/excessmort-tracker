@@ -3,8 +3,8 @@ source("functions.R")
 load("rda/cdc_counts.rda")
 load("rda/counts-usa.rda")
 load("rda/ft_counts.rda")
-states     <- unique(percent_change$jurisdiction)
-countries  <- unique(percent_change_countries$jurisdiction)
+states     <- sort(unique(percent_change$jurisdiction))
+countries  <- sort(unique(percent_change_countries$jurisdiction))
 button_style <- "color: black; background-color: rgb(230, 220, 205); position: relative; 
                      text-align:center; border-radius: 6px; border-width: 2px; font-family: 'helvetica'; font-weight: bold"
 
@@ -16,7 +16,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
       tags$meta(name="keywords", content="Excess Mortality, COVID-19"),
       tags$meta(name="author", content="Rolando J. Acosta")
     ),
-
+    
     # -- Background color of UI
     setBackgroundColor(color = "#F8F5F0"),
 
@@ -91,9 +91,14 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 multiple = TRUE,
                                                 options  = list(maxItems    = 5,
                                                                 placeholder = "Choose a state"))),
+                          
                           column(4, align = "center",
-                                 radioButtons("percent-change-states-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("percent-change-states-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
+                          
+                          # column(4, align = "center",
+                          #        radioButtons("percent-change-states-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
                           
                           # -- Date range input
                           column(4, align = "center",
@@ -104,10 +109,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(cdc_counts$date)))),
                         
-                        plotOutput("percent_change_usa"), 
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")), # End of tabPanel: within-percent-change-states
+                        plotOutput("percent_change_usa")), # End of tabPanel: within-percent-change-states
                
                tabPanel("within-percent-change-countries",
                         
@@ -127,8 +129,12 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                   placeholder = "Choose a country"))),
                           
                           column(4, align = "center",
-                                 radioButtons("percent-change-countries-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("percent-change-countries-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
+                          
+                          # column(4, align = "center",
+                          #        radioButtons("percent-change-countries-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
                           
                             # -- Date range input
                             column(4, align = "center",
@@ -139,10 +145,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                   format = "M-dd-yyyy",
                                                   max    = max(percent_change_countries$date)))),
 
-                        plotOutput("percent_change_countries"),
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")), # End of tabPanel: within-percent-change-countries
+                        plotOutput("percent_change_countries")), # End of tabPanel: within-percent-change-countries
                
                tabPanel("within-percent-change-both",
                         
@@ -162,8 +165,12 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                 placeholder = "Choose a country"))),
                           
                           column(4, align = "center",
-                                 radioButtons("percent-change-both-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("percent-change-both-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
+                          
+                          # column(4, align = "center",
+                          #        radioButtons("percent-change-both-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
                           
                           # -- Date range input
                           column(4, align = "center",
@@ -174,10 +181,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(percent_change_usa$date)))),
                         
-                        plotOutput("percent_change_both"),
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")) # End of tabPanel: within-percent-change-both
+                        plotOutput("percent_change_both")) # End of tabPanel: within-percent-change-both
              )), # End of tabsetPanel: within-percent-change
              
     tabPanel("excess-deaths",
@@ -200,7 +204,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                         
                         # -- Text to briefly explain inputs, data, and graphics
                         # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"), 
-                        
+                        br(),
                         # -- Inputs
                         fluidRow(
                           # -- Jurisdiction input
@@ -214,12 +218,16 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                 placeholder = "Choose a state"))),
                           
                           column(2, align = "center",
-                                 radioButtons("excess-deaths-states-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("excess-deaths-states-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
                           
-                          column(2, align = "center",
-                                 radioButtons("excess-deaths-states-POP", "Per 100,000", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                          # column(2, align = "left",
+                          #        radioButtons("excess-deaths-states-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
+                          
+                          column(2, align = "left",
+                                 radioButtons("excess-deaths-states-POP", "Excess deaths:", 
+                                              choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
                           
                           
                           # -- Date range input
@@ -231,16 +239,13 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(cdc_counts$date)))),
                         
-                        plotOutput("excess_deaths_usa"),
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")), # End of tabpanel: within-excess-deaths-states
+                        plotOutput("excess_deaths_usa")), # End of tabpanel: within-excess-deaths-states
                
                tabPanel("within-excess-deaths-countries",
                         
                         # -- Text to briefly explain inputs, data, and graphics
                         # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"), 
-                        
+                        br(),
                         fluidRow(
                           # -- Jurisdiction input
                           column(4, align = "center",
@@ -253,12 +258,16 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                 placeholder = "Choose a country"))),
                           
                           column(2, align = "center",
-                                 radioButtons("excess-deaths-countries-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("excess-deaths-countries-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
                           
-                          column(2, align = "center",
+                          # column(2, align = "left",
+                          #        radioButtons("excess-deaths-countries-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
+                          
+                          column(2, align = "left",
                                  radioButtons("excess-deaths-countries-POP", "Per 100,000", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                              choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
                           
                           # -- Date range input
                           column(4, align = "center",
@@ -269,16 +278,13 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(percent_change_countries$date)))),
                         
-                        plotOutput("excess_deaths_countries"),
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")), # End of tabpanel: within-excess-deaths-states
+                        plotOutput("excess_deaths_countries")), # End of tabpanel: within-excess-deaths-states
                
                tabPanel("within-excess-deaths-both",
                         
                         # -- Text to briefly explain inputs, data, and graphics
                         # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"), 
-                        
+                        br(),
                         # -- Inputs
                         fluidRow(
                           # -- Jurisdiction input
@@ -292,12 +298,16 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                                 placeholder = "Choose a state"))),
                           
                           column(2, align = "center",
-                                 radioButtons("excess-deaths-both-CI", "Confidence Intervarls?", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                 checkboxInput("excess-deaths-both-CI", "95% Confidence Intervarls?", 
+                                               value = FALSE)),
                           
-                          column(2, align = "center",
+                          # column(2, align = "left",
+                          #        radioButtons("excess-deaths-both-CI", "Confidence Intervarls?", 
+                          #                     choices = c("Yes", "No"), selected = "Yes")),
+                          
+                          column(2, align = "left",
                                  radioButtons("excess-deaths-both-POP", "Per 100,000", 
-                                              choices = c("Yes", "No"), selected = "Yes")),
+                                              choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
                           
                           
                           # -- Date range input
@@ -309,12 +319,18 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(cdc_counts$date)))),
                         
-                        plotOutput("excess_deaths_both"),
-                        br(),
-                        br(),
-                        p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696")) # End of tabpanel: within-excess-deaths-both
+                        plotOutput("excess_deaths_both")) # End of tabpanel: within-excess-deaths-both
              ) # End of tabsetPanel: within-excess-deaths
         ) # End of tabPanel: excess-deaths
-    ) # End of tabsetPanel: global-panel
+    ), # End of tabsetPanel: global-panel
+    br(),
+    br(),
+    p("If you have comments or suggestions, you can reach me at racosta@fas.harvard.edu or in",
+      a("Twitter", href = "https://twitter.com/RJANunez"),
+      align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696"),
+    p("The code to recreate the visualizations and app is ",
+      a("here", href = "https://github.com/RJNunez/excessmort-tracker"), 
+      align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696; margin-top:-8pt"),
+    # p("This is a beta version", align = "left", style = "font-family: 'arial'; font-size: 9pt; color:#969696"),
 ) # End of fluidPage
 ) # End of UI

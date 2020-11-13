@@ -80,7 +80,7 @@ percent_change <- map_df(states, function(x){
   if(x == "Puerto Rico"){
     exclude_dates <- unique(sort(c(exclude_dates, seq(make_date(2017, 9, 20), make_date(2018, 3, 31), by = "day"))))
   }
-  print(x)
+  
   w <- weight %>% 
     filter(jurisdiction == x) %>%
     # na.omit() %>%

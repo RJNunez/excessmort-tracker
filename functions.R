@@ -1,15 +1,14 @@
 ##
-get_excess_deaths <- function(dat, start, end)
+get_excess_deaths <- function(dat, jurisdictions, start, end)
 {
   # -- Dates to exclude when computing expected mortality
   flu_season    <- seq(make_date(2017, 12, 16), make_date(2018, 1, 16), by = "day")
   exclude_dates <- c(flu_season, seq(make_date(2020, 1, 1), today(), by = "day"))
-  
+
   # -- Number of observations
-  knots <- dat %>%
-    filter(!jurisdiction %in% c("Connecticut", "North Carolina", "Italy")) %>%
+  num_obs <- dat %>%
+    filter(jurisdiction %in% jurisdictions) %>%
     filter(date >= start, date <= end) %>%
-    # filter(date >= input$range_edeaths[1], date <= input$range_edeaths[2]) %>%
     group_by(jurisdiction) %>%
     summarize(n = n()) %>%
     arrange(n) %>%
@@ -17,33 +16,49 @@ get_excess_deaths <- function(dat, start, end)
     pull(n)
   
   # -- Getting rid of bad data
-  dat <- filter(dat, !jurisdiction %in% c("Connecticut", "North Carolina", "Italy"))
+  dat <- filter(dat, jurisdiction %in% jurisdictions)
   
   # -- Jurisdictions 
   jurs <- unique(dat$jurisdiction)
   
   # -- Choosing the number of knots
-  if(knots >= 25) {
+  if(num_obs >= 13) {
     nknots <- 12
   } else {
-    nknots <- ceiling(knots/2)
+    nknots <- ceiling(num_obs/2)
   }
   
   # -- Computing excess deaths
   eds <- map_df(jurs, function(x){
     
-    fit <- dat %>%
-      filter(jurisdiction == x) %>%
-      arrange(date) %>%
-      excess_model(.,
-                   start          = start,
-                   end            = end,
-                   exclude        = exclude_dates,
-                   knots.per.year = nknots, 
-                   aic            = FALSE, 
-                   order.max      = 7,
-                   weekday.effect = FALSE,
-                   verbose        = FALSE)
+    if(x == "Puerto Rico") {
+      fit <- dat %>%
+        filter(jurisdiction == x) %>%
+        arrange(date) %>%
+        excess_model(.,
+                     start          = start,
+                     end            = end,
+                     exclude        = unique(sort(c(exclude_dates, seq(make_date(2017, 9, 20), make_date(2018, 3, 31), by = "day")))),
+                     knots.per.year = nknots, 
+                     aic            = FALSE, 
+                     order.max      = 7,
+                     weekday.effect = FALSE,
+                     verbose        = FALSE)
+    } else {
+      
+      fit <- dat %>%
+        filter(jurisdiction == x) %>%
+        arrange(date) %>%
+        excess_model(.,
+                     start          = start,
+                     end            = end,
+                     exclude        = exclude_dates,
+                     knots.per.year = nknots, 
+                     aic            = FALSE, 
+                     order.max      = 7,
+                     weekday.effect = FALSE,
+                     verbose        = FALSE)
+    }
     
     excess_cumulative(fit, start = start, end = end) %>%
       mutate(jurisdiction = x) %>%
@@ -60,9 +75,6 @@ get_excess_deaths <- function(dat, start, end)
 ##
 percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
 {
-  # -- For the gray lines in the background
-  background_dat <- filter(dat, date >= start, date <= end)
-  
   # -- Jurisdiction specific data
   jurisdiction_dat <- dat %>%
     filter(jurisdiction %in% jurisdictions) %>%
@@ -77,14 +89,13 @@ percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
     mutate(label = paste0(" ", jurisdiction))
   
   # -- Used to determine y-axis
-  y_limits <- range(jurisdiction_dat$fitted)
+  y_limits <- range(jurisdiction_dat$lwr, jurisdiction_dat$upr)
   edays    <- weeks(2)
   
   # -- Making Viz
   p <- jurisdiction_dat %>%
     ggplot(aes(date, fitted, color=jurisdiction)) +
     geom_hline(yintercept = 0, color="#525252", lty=2) +
-    geom_line(aes(date, fitted, group=jurisdiction), color="#969696", size=0.50, alpha=0.20, data = background_dat) +
     geom_line(size=1, show.legend = FALSE, data = jurisdiction_dat) +
     geom_dl(aes(label=label), method=list("last.points", fontfamily="Helvetica", fontface="bold", cex=1), data = last_dp) +
     ylab("Percent change from average mortality") +
@@ -97,7 +108,7 @@ percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
                        values = my_palette) +
     theme_sandstone()
 
-  if(ci_ind == "Yes")
+  if(ci_ind)
   {
     p <- p + 
       geom_ribbon(aes(ymin = lwr, ymax = upr, fill=jurisdiction), color=NA, alpha=0.50, show.legend = FALSE, data= jurisdiction_dat) +
@@ -110,13 +121,6 @@ percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
 ##
 excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
 {
-  # -- For the gray lines in the background
-  background_dat <- filter(dat, date >= start, date <= end) %>%
-    mutate(fitted100 = 100000 * fitted / population,
-           se100     = 100000 / population * se,
-           lwr100    = fitted100 - se100 * 1.96,
-           upr100    = fitted100 + se100 * 1.96)
-    
   # -- Covid19 mortality data
   covid_dat <- dat %>%
     filter(jurisdiction %in% jurisdictions, 
@@ -140,17 +144,15 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     ungroup() %>%
     mutate(label = paste0(" ", jurisdiction))
   
-  if(pop_ind == "No"){
+  if(pop_ind == "Totals"){
     
     # -- Used to determine y-axis
-    y_limits <- range(jurisdiction_dat$fitted)
+    y_limits <- range(jurisdiction_dat$lwr, jurisdiction_dat$upr)
     edays    <- weeks(2)
     
     # -- Making Viz
     p <- jurisdiction_dat %>%
       ggplot(aes(date, fitted, label=jurisdiction, color=jurisdiction)) +
-      geom_line(aes(date, fitted, group=jurisdiction), color="#969696", size=0.50, alpha=0.20, data = background_dat) +
-      # geom_line(aes(date, covid19, color=jurisdiction), lty=2, size=0.50, show.legend = FALSE, data = covid_dat) +
       geom_line(size=1, show.legend = FALSE, data = jurisdiction_dat) +
       geom_dl(method=list("last.points", fontfamily="Helvetica", fontface="bold", cex=1), data = last_dp) +
       ylab("Cumulative excess deaths") +
@@ -165,7 +167,7 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
                         values = my_palette) +
       theme_sandstone()
     
-    if(ci_ind == "Yes")
+    if(ci_ind)
     {
       p <- p + 
         geom_ribbon(aes(ymin = lwr, ymax = upr, fill=jurisdiction), color=NA, alpha=0.50, show.legend = FALSE, data= jurisdiction_dat) +
@@ -174,14 +176,12 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
     }
   } else {
     # -- Used to determine y-axis
-    y_limits <- range(jurisdiction_dat$fitted100)
+    y_limits <- range(jurisdiction_dat$lwr100, jurisdiction_dat$upr100)
     edays    <- weeks(2)
   
     # -- Making Viz
     p <- jurisdiction_dat %>%
       ggplot(aes(date, fitted100, color=jurisdiction)) +
-      geom_line(aes(date, fitted100, group=jurisdiction), color="#969696", size=0.50, alpha=0.20, data = background_dat) +
-      # geom_line(aes(date, covid19, color=jurisdiction), lty=2, size=0.50, show.legend = FALSE, data = covid_dat) +
       geom_line(size=1, show.legend = FALSE, data = jurisdiction_dat) +
       geom_dl(aes(label=label), method=list("last.points", fontfamily="Helvetica", fontface="bold", cex=1), data = last_dp) +
       ylab("Cumulative excess deaths per 100,000") +
@@ -196,7 +196,7 @@ excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
                         values = my_palette) +
       theme_sandstone()
     
-    if(ci_ind == "Yes")
+    if(ci_ind)
     {
       p <- p + 
         geom_ribbon(aes(ymin = lwr100, ymax = upr100, fill=jurisdiction), color=NA, alpha=0.50, show.legend = FALSE, data= jurisdiction_dat) +
