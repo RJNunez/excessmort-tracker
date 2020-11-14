@@ -39,7 +39,7 @@ shinyServer(function(input, output, session) {
   reactive_excess_deaths_usa <- reactive({ get_excess_deaths(dat = cdc_counts, jurisdictions = input$state_edeaths, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
   
   # -- Reactive dataset for excess deaths in Countries
-  reactive_excess_deaths_countries <- reactive({ get_excess_deaths(dat = world_counts, jurisdictions = input$countries_edeaths, start = input$range_edeaths[1], end = input$range_edeaths[2]) })
+  reactive_excess_deaths_countries <- reactive({ get_excess_deaths(dat = world_counts, jurisdictions = input$countries_edeaths, start = input$range_countries_edeaths[1], end = input$range_countries_edeaths[2]) })
   
   # -- Reactive dataset for excess deaths in both
   reactive_excess_deaths_both <- reactive({ 
