@@ -117,7 +117,7 @@ ny <- filter(covid_states, jurisdiction == "New York")
 # -- Covid 19 data for the rest of new york
 ny <- left_join(ny, covid_nyc, by = "date") %>%
   mutate(death = deaths.x - deaths.y, 
-         jurisdiction = "Rest of New York") %>%
+         jurisdiction = "New York (not including NYC)") %>%
   select(date, jurisdiction, death)
 
 # -- Covid 19 data for states
@@ -138,7 +138,10 @@ rm(covid_nyc, ny)
 # -- Renaming
 cdc_counts <- covid_states %>%
   rename(covid19 = death) %>%
-  right_join(dat, by = c("date", "jurisdiction"))
+  right_join(dat, by = c("date", "jurisdiction")) #%>%
+  # group_by(jurisdiction) %>%
+  # mutate(covid19_daily = c(NA, diff(covid19))) %>%
+  # ungroup()
 
 # -- Saving 
 save(cdc_counts, file = "rda/cdc_counts.rda", compress = "xz")
@@ -172,9 +175,6 @@ exclude_dates <- c(make_date(1989, 7, 1) + 0:365,
 # define control regions 
 control_dates <- seq(as.Date("2002-01-01"), as.Date("2013-12-31"), by = "day")
 
-# # -- Loading data
-# source("wrangle-cdc.R")
-
 # -- Denoting periods of interest
 flu_season     <- seq(make_date(2017, 12, 16), make_date(2018, 1, 16), by = "day")
 exclude_dates  <- c(flu_season, seq(make_date(2020, 1, 1), today(), by = "day"))
@@ -193,7 +193,7 @@ percent_change <- map_df(states, function(x){
   if(x == "Puerto Rico"){
     exclude_dates <- unique(sort(c(exclude_dates, seq(make_date(2017, 9, 20), make_date(2018, 3, 31), by = "day"))))
   }
-  print(x)
+  
   w <- weight %>% 
     filter(jurisdiction == x) %>%
     # na.omit() %>%
@@ -246,24 +246,12 @@ percent_change <- map_df(states, function(x){
   mutate(lwr = fitted - 1.96 * se, 
          upr = fitted + 1.96 * se)
 
-# -- Percent change usa
-percent_change_usa <- percent_change %>%
-  filter(jurisdiction != "Puerto Rico") %>%
-  group_by(date, type) %>% 
-  summarize(fitted   = sum(expected * fitted) / sum(expected), 
-            se       = sqrt(sum(expected^2 * se^2)) / sum(expected),
-            sd       = sqrt(sum(expected^2 * sd^2)) / sum(expected),
-            expected = sum(expected),
-            observed = sum(observed)) %>%
-  ungroup() %>%
-  mutate(type = ifelse(type == "weighted", "CDC weighted", "CDC unweighted"))
-
 # -- Excess deaths per state
 excess_deaths <- map_df(states, function(x){
   if(x == "Puerto Rico"){
     exclude_dates <- unique(sort(c(exclude_dates, seq(make_date(2017, 9, 20), make_date(2018, 3, 31), by = "day"))))
   }
-  print(x)
+  
   w <- weight %>% 
     filter(jurisdiction == x) %>%
     # na.omit() %>%
@@ -304,17 +292,72 @@ excess_deaths <- map_df(states, function(x){
   left_join(covid_states, by = c("date", "jurisdiction")) %>%
   rename(covid19 = death)
 
+
+# -- US wide counts
+us_counts <- weight %>%
+  group_by(date) %>%
+  summarize(outcome    = sum(outcome),
+            covid19    = sum(covid19, na.rm = TRUE),
+            population = sum(population))
+
+# -- Fitting model to US
+fit <- excess_model(counts         = us_counts,
+                    exclude        = exclude_dates,
+                    start          = min(weight$date),
+                    end            = max_weighted,
+                    aic            = FALSE, 
+                    order.max      = 7,
+                    knots.per.year = nknots,
+                    weekday.effect = FALSE,
+                    verbose        = FALSE)
+
+# -- Percent change for USA
+percent_change_usa <- with(fit,
+                           tibble(date     = date, 
+                                  expected = expected, 
+                                  observed = observed,
+                                  fitted   = fitted, 
+                                  se       = se,
+                                  sd       = sd)) %>%
+                            mutate(lwr = fitted - 1.96 * se,
+                                   upr = fitted + 1.96 * se)
+
 # -- Excess deaths usa
-excess_deaths_usa <- excess_deaths %>%
-  filter(jurisdiction != "Puerto Rico") %>%
-  group_by(date, type) %>% 
-  summarize(observed = sum(observed),
-            covid19  = sum(covid19, na.rm = TRUE),
-            sd       = sqrt(sum(sd^2)),
-            fitted   = sum(fitted),
-            se       = sqrt(sum(se^2))) %>%
+excess_deaths_usa <- excess_cumulative(fit, start = make_date(2020, 03, 01), end = max_weighted) %>%
+  mutate(lwr = fitted - 1.96 * se, 
+         upr = fitted + 1.96 * se)
+
+# -- Adding covid19 data
+excess_deaths_usa <- covid_states %>%
+  group_by(date) %>%
+  summarize(covid19 = sum(death)) %>%
   ungroup() %>%
-  mutate(type = ifelse(type == "weighted", "CDC weighted", "CDC unweighted"))
+  right_join(excess_deaths_usa, by = "date")
+
+# # -- Percent change usa
+# percent_change_usa <- percent_change %>%
+#   filter(jurisdiction != "Puerto Rico") %>%
+#   group_by(date, type) %>% 
+#   summarize(fitted   = sum(expected * fitted) / sum(expected), 
+#             se       = sqrt(sum(expected^2 * se^2)) / sum(expected),
+#             sd       = sqrt(sum(expected^2 * sd^2)) / sum(expected),
+#             expected = sum(expected),
+#             observed = sum(observed)) %>%
+#   ungroup() %>%
+#   mutate(type = ifelse(type == "weighted", "CDC weighted", "CDC unweighted"))
+
+
+# # -- Excess deaths usa
+# excess_deaths_usa <- excess_deaths %>%
+#   filter(jurisdiction != "Puerto Rico") %>%
+#   group_by(date, type) %>% 
+#   summarize(observed = sum(observed),
+#             covid19  = sum(covid19, na.rm = TRUE),
+#             sd       = sqrt(sum(sd^2)),
+#             fitted   = sum(fitted),
+#             se       = sqrt(sum(se^2))) %>%
+#   ungroup() %>%
+#   mutate(type = ifelse(type == "weighted", "CDC weighted", "CDC unweighted"))
 
 # -- Saving 
 save(covid_states, percent_change, percent_change_usa, excess_deaths, excess_deaths_usa,
@@ -332,7 +375,6 @@ library(data.table)
 library(tidyverse)
 library(lubridate)
 library(readxl)
-# load("rda/counts-usa.rda")
 
 # -- Retrieving mortality data from FT
 url <- "https://raw.githubusercontent.com/Financial-Times/coronavirus-excess-mortality-data/master/data/ft_excess_deaths.csv"
@@ -385,7 +427,6 @@ control_dates <- seq(make_date(2010, 01, 01), make_date(2019, 12, 31), "days")
 # -- Computing percent_change
 percent_change_countries <- map_df(countries, function(x){
   
-  print(x)
   fit <- suppressMessages(counts %>%
                             filter(country == x) %>%
                             arrange(date) %>%
@@ -409,7 +450,6 @@ percent_change_countries <- map_df(countries, function(x){
 # -- Computing excess deaths
 excess_deaths_countries <- map_df(countries, function(x){
   
-  print(x)
   fit <- suppressMessages(counts %>%
                             filter(country == x) %>%
                             arrange(date) %>%
@@ -454,18 +494,17 @@ excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date"
 
 # -- Using CDC usa data (percent change)
 usa_temp <- percent_change_usa %>%
-  filter(type == "CDC weighted") %>%
-  mutate(lwr = fitted - 1.96 * se, 
-         upr = fitted + 1.96 * se) %>%
+  # filter(type == "CDC weighted") %>%
+  # mutate(lwr = fitted - 1.96 * se, 
+  #        upr = fitted + 1.96 * se) %>%
   select(date, expected, observed, fitted, se, lwr, upr) %>%
   mutate(country = "United States")
 
 # -- Using CDC usa data (excess deaths)
-colnames(excess_deaths_countries)
 ed_temp <- excess_deaths_usa %>%
-  filter(type == "CDC weighted") %>%
-  mutate(lwr = fitted - 1.96 * se, 
-         upr = fitted + 1.96 * se) %>%
+  # filter(type == "CDC weighted") %>%
+  # mutate(lwr = fitted - 1.96 * se, 
+  #        upr = fitted + 1.96 * se) %>%
   mutate(country = "United States") %>%
   select(date, observed, sd, fitted, se, country, lwr, upr, covid19)
 
@@ -479,27 +518,34 @@ excess_deaths_countries <- excess_deaths_countries %>%
   filter(country != "United States of America") %>%
   bind_rows(ed_temp)
 
+# -- Renaming columns
 percent_change_countries <- rename(percent_change_countries, jurisdiction = country)
-excess_deaths_countries <- rename(excess_deaths_countries, jurisdiction = country)
-world_counts <- rename(counts, jurisdiction = country)
+excess_deaths_countries  <- rename(excess_deaths_countries, jurisdiction = country)
+world_counts             <- rename(counts, jurisdiction = country)
 
-# -- World counts
+# -- Getting USA data from CDC
 counts_tmp <- cdc_counts %>%
   group_by(date) %>%
   summarize(outcome    = sum(outcome), 
-            population = sum(population)) %>%
+            population = sum(population),
+            covid19    = sum(covid19, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(jurisdiction = "United States") %>%
-  select(date, outcome, jurisdiction, population)
-world_counts <- world_counts %>%
-  filter(jurisdiction != "United States of America") %>%
-  select(-expected_deaths) %>%
-  bind_rows(counts_tmp)
+  mutate(covid19 = c(NA, diff(covid19))) %>%
+  select(date, outcome, covid19, jurisdiction, population)
+
+
+# -- Adding COVID-19 to world counts
 world_counts <- eudat %>%
-  mutate(country = ifelse(country == "United States of America", "United States", country)) %>%
-  select(-deaths) %>%
   right_join(world_counts, by = c("date", "country" = "jurisdiction")) %>%
-  rename(jurisdiction = country)
+  rename(jurisdiction = country) %>%
+  select(date, outcome, covid19, jurisdiction, population) %>%
+  mutate(covid19 = c(NA, diff(covid19)))
+
+# -- Adding USA to world counts
+world_counts <- counts_tmp %>%
+  bind_rows(world_counts) %>%
+  filter(jurisdiction != "United States of America")
 
 # -- Save
 the_stamp <- now()

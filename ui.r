@@ -55,7 +55,38 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
       # p("Choose the contrast of interest", align = "center", style = "font-family: 'helvetica'; font-size: 10pt ; color:#969696"),
       fluidRow(align = "center", 
                actionButton("pc-panel", "Percent Increase in Mortality", style = button_style),
+               actionButton("data-panel", "Data", style = button_style),
                actionButton("ed-panel", "Cumulative Excess Mortality", style = button_style)),
+      
+    # -- Data
+    tabPanel("data",
+             
+             br(),
+             
+             fluidRow(
+               # -- Jurisdiction input
+               column(6, align = "center",
+                      selectizeInput("both_data",
+                                     label    = "Jurisdiction:",
+                                     choices  = sort(c(countries, states)),
+                                     selected = c("United States"),
+                                     multiple = TRUE,
+                                     options  = list(maxItems    = 5,
+                                                     placeholder = "Choose a jurisdiction"))),
+              
+               # -- Date range input
+               column(6, align = "center",
+                      dateRangeInput("range_both_data", "Period",
+                                     start  = make_date(2020,03,01),
+                                     end    = max(percent_change_usa$date),
+                                     min    = make_date(2020, 01, 01),
+                                     format = "M-dd-yyyy",
+                                     max    = max(percent_change_usa$date)))), 
+             
+             DT::dataTableOutput("table")
+             
+             
+             ),
 
     # -- Percent change panel
     tabPanel("percent-change",
@@ -96,10 +127,6 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                  checkboxInput("percent-change-states-CI", "95% Confidence Intervarls?", 
                                                value = FALSE)),
                           
-                          # column(4, align = "center",
-                          #        radioButtons("percent-change-states-CI", "Confidence Intervarls?", 
-                          #                     choices = c("Yes", "No"), selected = "Yes")),
-                          
                           # -- Date range input
                           column(4, align = "center",
                                  dateRangeInput("range", "Period",
@@ -132,10 +159,6 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                  checkboxInput("percent-change-countries-CI", "95% Confidence Intervarls?", 
                                                value = FALSE)),
                           
-                          # column(4, align = "center",
-                          #        radioButtons("percent-change-countries-CI", "Confidence Intervarls?", 
-                          #                     choices = c("Yes", "No"), selected = "Yes")),
-                          
                             # -- Date range input
                             column(4, align = "center",
                                    dateRangeInput("range_countries", "Period",
@@ -167,11 +190,7 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                           column(4, align = "center",
                                  checkboxInput("percent-change-both-CI", "95% Confidence Intervarls?", 
                                                value = FALSE)),
-                          
-                          # column(4, align = "center",
-                          #        radioButtons("percent-change-both-CI", "Confidence Intervarls?", 
-                          #                     choices = c("Yes", "No"), selected = "Yes")),
-                          
+                        
                           # -- Date range input
                           column(4, align = "center",
                                  dateRangeInput("range_both", "Period",

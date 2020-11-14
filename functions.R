@@ -73,7 +73,7 @@ get_excess_deaths <- function(dat, jurisdictions, start, end)
 }
 
 ##
-percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
+plot_percent_change <- function(dat, jurisdictions, start, end, ci_ind)
 {
   # -- Jurisdiction specific data
   jurisdiction_dat <- dat %>%
@@ -118,8 +118,108 @@ percent_change_plot <- function(dat, jurisdictions, start, end, ci_ind)
   return(p)
 }
 
+# dat <- filter(percent_change, type == "weighted")
+# dat <- percent_change_countries
+# start <- make_date(2020,03,01)
+# end <- max(cdc_counts$date)
+# end <- make_date(2020, 07, 01)
+
+# start <- make_date(2020,03,01)
+# end <- make_date(2020,08,30)
+# jurisdictions <- c("Puerto Rico", "Florida")
+# ed <- get_excess_deaths(dat = cdc_counts, jurisdictions, start, end)
+# pc <- filter(percent_change, type == "weighted")
+
+make_table <- function(pc, ed, jurisdictions, start, end)
+{
+  #-------------------------------------------------------------#
+  ### pc: percent change data table
+  ### ed: excess deaths data table (data from get_excess_deaths)
+  #-------------------------------------------------------------#
+  
+  jurisdiction_pc <- filter(pc, jurisdiction %in% jurisdictions)
+  jurisdiction_ed <- filter(ed, jurisdiction %in% jurisdictions)
+  
+  tab1 <- jurisdiction_pc %>%
+    filter(date >= start, date <= end) %>%
+    mutate(pc = paste0(format(round(100*fitted, 1), nsmall = 1), "%", "(",
+                       format(round(100*lwr, 1), nsmall = 1), "%", " to ",
+                       format(round(100*upr, 1), nsmall = 1), "%", ")")) %>%
+    select(date, jurisdiction, pc)
+  
+  tab2 <- jurisdiction_ed %>%
+    filter(date >= start, date <= end) %>%
+    mutate(fitted100 = 100000 * fitted / population,
+           se100     = 100000 / population * se,
+           lwr100    = fitted100 - se100 * 1.96,
+           upr100    = fitted100 + se100 * 1.96,
+           fitted    = prettyNum(round(fitted), big.mark = ","),
+           lwr       = prettyNum(round(lwr), big.mark = ","),
+           upr       = prettyNum(round(upr), big.mark = ","),
+           ed        = paste0(format(fitted), "(",
+                              format(lwr), " to ",
+                              format(upr), ")"),
+           ed100     = paste0(format(round(fitted100, 1), nsmall = 1), "(",
+                              format(round(lwr100, 1), nsmall = 1), " to ",
+                              format(round(upr100, 1), nsmall = 1), ")")) %>%
+    select(date, jurisdiction, ed, ed100)
+    
+
+  tab <- left_join(tab1, tab2, by = c("date", "jurisdiction")) %>%
+    setNames(c("Date", "Jurisdiction", "PC (CI)", "CEM (CI)", "CEM per 100,000 (CI)")) %>%
+    mutate(Date = format(Date, "%B %d, %Y"))
+  
+  DT::datatable(tab, 
+                rownames = FALSE,
+                options = list(dom = 't',
+                               pageLength = -1))
+}
+
+# make_table(pc, ed, jurisdictions, start, end)
+
+plot_worse_percent_change <- function(dat, start, end)
+{
+  # -- Wrangling data
+  jurisdiction_dat <- dat %>%
+    group_by(jurisdiction) %>%
+    mutate(change      = c(NA, diff(fitted)),
+           change      = ifelse(last(change) > 0 & last(fitted) > 0, "Upward", "Downward"))
+  
+  # -- Worse jurisdictions
+  top_worse <- jurisdiction_dat %>%
+    filter(date >= end - weeks(1)) %>%
+    group_by(jurisdiction) %>%
+    mutate(last_fitted = last(fitted)) %>%
+    ungroup() %>%
+    arrange(desc(last_fitted)) %>%
+    slice(1:6) %>%
+    pull(jurisdiction)
+  
+  # PROBLEM OF DUPLICITY OF JURISDICTIONS
+  
+  jurisdiction_dat %>%
+    filter(jurisdiction %in% top_worse, date >= start, date <= end) %>%
+    mutate(jurisdiction = factor(jurisdiction, levels = top_worse)) %>%
+    ggplot(aes(date, fitted, color=change, fill=change)) +
+    geom_hline(yintercept = 0, color="#525252", lty=2) +
+    geom_ribbon(aes(ymin=lwr, ymax=upr), alpha=0.20, color=NA, show.legend = FALSE) +
+    geom_line(show.legend = FALSE) +
+    scale_color_manual(values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
+    scale_fill_manual(values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
+    scale_x_date(date_labels = "%b %Y") +
+    scale_y_continuous(labels = scales::percent) +
+    ylab("Percent change from average mortality") +
+    xlab("Date") +
+    facet_wrap(~jurisdiction, nrow=2, ncol=3) +
+    theme_sandstone()
+    
+  
+  
+  
+}
+
 ##
-excess_deaths_plot <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
+plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)
 {
   # -- Covid19 mortality data
   covid_dat <- dat %>%
