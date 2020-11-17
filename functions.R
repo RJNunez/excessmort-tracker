@@ -130,6 +130,7 @@ plot_percent_change <- function(dat, jurisdictions, start, end, ci_ind)
 # ed <- get_excess_deaths(dat = cdc_counts, jurisdictions, start, end)
 # pc <- filter(percent_change, type == "weighted")
 
+##
 make_table <- function(pc, ed, jurisdictions, start, end)
 {
   #-------------------------------------------------------------#
@@ -175,48 +176,52 @@ make_table <- function(pc, ed, jurisdictions, start, end)
                                pageLength = -1))
 }
 
-# make_table(pc, ed, jurisdictions, start, end)
-
+##
 plot_worse_percent_change <- function(dat, start, end)
 {
   # -- Wrangling data
   jurisdiction_dat <- dat %>%
     group_by(jurisdiction) %>%
-    mutate(change      = c(NA, diff(fitted)),
-           change      = ifelse(last(change) > 0 & last(fitted) > 0, "Upward", "Downward"))
+    mutate(label = c(NA, diff(fitted))) %>%
+    ungroup()
+  
+  # -- Finding closest date to end date
+  end <- unique(dat$date)[which(abs(unique(dat$date) - end) == min(abs(unique(dat$date) - end)))]
   
   # -- Worse jurisdictions
   top_worse <- jurisdiction_dat %>%
-    filter(date >= end - weeks(1)) %>%
+    filter(date == end) %>%
     group_by(jurisdiction) %>%
     mutate(last_fitted = last(fitted)) %>%
     ungroup() %>%
+    filter(date == max(date)) %>%
     arrange(desc(last_fitted)) %>%
     slice(1:6) %>%
     pull(jurisdiction)
   
-  # PROBLEM OF DUPLICITY OF JURISDICTIONS
-  
+  # -- Viz
   jurisdiction_dat %>%
     filter(jurisdiction %in% top_worse, date >= start, date <= end) %>%
     mutate(jurisdiction = factor(jurisdiction, levels = top_worse)) %>%
+    group_by(jurisdiction) %>%
+    mutate(last_fitted = last(fitted),
+           change      = ifelse(last(label) > 0, "Upward", "Downward")) %>%
+    ungroup() %>%
     ggplot(aes(date, fitted, color=change, fill=change)) +
     geom_hline(yintercept = 0, color="#525252", lty=2) +
     geom_ribbon(aes(ymin=lwr, ymax=upr), alpha=0.20, color=NA, show.legend = FALSE) +
     geom_line(show.legend = FALSE) +
+    geom_dl(aes(color=change, label=paste0("",round(100*last_fitted,1),"%")), method=list("last.points", fontface="bold", cex=0.90)) +
     scale_color_manual(values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
     scale_fill_manual(values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
-    scale_x_date(date_labels = "%b %Y") +
+    scale_x_date(date_labels = "%b %Y", limits = c(start, end+weeks(2))) +
     scale_y_continuous(labels = scales::percent) +
     ylab("Percent change from average mortality") +
     xlab("Date") +
     facet_wrap(~jurisdiction, nrow=2, ncol=3) +
     theme_sandstone()
-    
-  
-  
-  
 }
+# plot_worse_percent_change(dat, start, end)
 
 ##
 plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind)

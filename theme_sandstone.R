@@ -36,8 +36,8 @@ theme_sandstone = function(base_size = 12, base_family = "") {
       
       # Specify facetting options
       strip.background = element_rect(fill = "#e0cfb6", color = "#e6dccd"),
-      strip.text.x     = element_text(size = base_size, color = "#525252"),
-      strip.text.y     = element_text(size = base_size, color = "#525252"),
+      strip.text.x     = element_text(size = base_size, face = "bold", color = "#525252"),
+      strip.text.y     = element_text(size = base_size, face = "bold", color = "#525252"),
       
       # Specify plot options
       plot.background = element_rect(color = "#525252", fill = "#e6dccd"),

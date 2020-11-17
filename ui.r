@@ -136,7 +136,9 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                                 format = "M-dd-yyyy",
                                                 max    = max(cdc_counts$date)))),
                         
-                        plotOutput("percent_change_usa")), # End of tabPanel: within-percent-change-states
+                        plotOutput("percent_change_usa"),
+                        br(),
+                        plotOutput("percent_change_usa_worse")), # End of tabPanel: within-percent-change-states
                
                tabPanel("within-percent-change-countries",
                         

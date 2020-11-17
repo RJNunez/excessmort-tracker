@@ -19,6 +19,11 @@ shinyServer(function(input, output, session) {
     plot_percent_change(dat = filter(percent_change, type == "weighted"), jurisdictions = input$state, start = input$range[1], end = input$range[2], ci_ind = input$`percent-change-states-CI`)
 })
   
+  # -- Plot of worse states in USA
+  output$percent_change_usa_worse <- renderPlot({
+    plot_worse_percent_change(dat = filter(percent_change, type == "weighted"), start = input$range[1], end = input$range[2])
+  })
+  
   # -- Percent change plot for countries
   output$percent_change_countries <- renderPlot({
     plot_percent_change(dat = percent_change_countries, jurisdictions = input$countries, start = input$range_countries[1], end = input$range_countries[2], ci_ind = input$`percent-change-countries-CI`)
@@ -65,73 +70,6 @@ shinyServer(function(input, output, session) {
     plot_excess_deaths(dat = reactive_excess_deaths_both(), jurisdictions = input$both_edeaths, start = input$range_both_edeaths[1], end = input$range_both_edeaths[2], ci_ind = input$`excess-deaths-both-CI`, pop_ind = input$`excess-deaths-both-POP`)
   })
     
-  # -- Percent change plot for US states  
-  output$percent_change_usa_worse <- renderPlot({
-    
-    # -- Worse 6 states
-    worse_states <- percent_change %>%
-      filter(type == "weighted",
-             date >= ymd(input$range[2] - weeks(1)),
-             date < ymd(input$range[2])) %>%
-      arrange(desc(fitted)) %>%
-      select(state) %>%
-      unique() %>%
-      slice(1:6) %>%
-      pull()
-    
-    # -- States data
-    states_dat <- percent_change %>%
-      filter(type == "weighted",
-             state %in% worse_states,
-             date >= input$range[1], date <= input$range[2]) %>%
-      group_by(state) %>%
-      mutate(dif = c(NA, diff(fitted))) %>%
-      ungroup() 
-    
-    # -- Adding labeling info
-    states_dat <- states_dat %>%
-      filter(date >= ymd(input$range[2]) - weeks(1)) %>%
-      mutate(flag  = ifelse(dif > 0, "Upward", "Downward"),
-             label = paste0("  ",round(100*fitted, 1), "%")) %>%
-      select(state, label, flag) %>%
-      right_join(states_dat, by = c("state")) %>%
-      select(-dif) %>%
-      mutate(state = factor(state, levels = worse_states))
-    
-    # -- Used to determine y-axis
-    y_limits <- range(states_dat$fitted)
-    
-    # -- Used to determine x-axis
-    x_limits <- range(states_dat$date)
-    if(x_limits[2] - x_limits[1] <= 30){ 
-      freq  <- "week"
-      edays <- weeks(2)
-    } else{ 
-      freq  <- "month"
-      edays <- months(2)
-    }
-    
-    # -- Making Viz
-    states_dat %>%
-      ggplot(aes(date, fitted, color=flag, fill=flag, label=label)) +
-      geom_hline(yintercept = 0, color="#525252", lty=2) +
-      geom_ribbon(aes(ymin=lwr, ymax=upr), alpha=0.20, color=NA, show.legend = FALSE) +
-      geom_line(show.legend = FALSE) +
-      geom_dl(method=list("last.points", fontfamily="Helvetica")) +
-      scale_color_manual(name = "",
-                         values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
-      scale_fill_manual(name = "",
-                        values = c("Upward" = "#cb181d", "Downward" = "#2171b5")) +
-      scale_y_continuous(labels = scales::percent) +
-      scale_x_date(date_labels = "%b %Y",
-                   limits = c(input$range[1], input$range[2] + edays)) +
-      ylab("Percent change from average mortality") +
-      xlab("Date") +
-      theme_slate() +
-      facet_wrap(~state) +
-      theme(strip.text = element_text(face="bold"))
-  })
-  
   # -- Data table
   output$table <- DT::renderDataTable({
     
