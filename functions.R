@@ -126,7 +126,7 @@ plot_percent_change <- function(dat, jurisdictions, start, end, ci_ind)
 
 # start <- make_date(2020,03,01)
 # end <- make_date(2020,08,30)
-# jurisdictions <- c("Puerto Rico", "Florida")
+# jurisdictions <- c("Puerto Rico")
 # ed <- get_excess_deaths(dat = cdc_counts, jurisdictions, start, end)
 # pc <- filter(percent_change, type == "weighted")
 
@@ -146,7 +146,8 @@ make_table <- function(pc, ed, jurisdictions, start, end)
     mutate(pc = paste0(format(round(100*fitted, 1), nsmall = 1), "%", "(",
                        format(round(100*lwr, 1), nsmall = 1), "%", " to ",
                        format(round(100*upr, 1), nsmall = 1), "%", ")")) %>%
-    select(date, jurisdiction, pc)
+    select(date, jurisdiction, pc, fitted) %>%
+    rename(pcORDER = fitted)
   
   tab2 <- jurisdiction_ed %>%
     filter(date >= start, date <= end) %>%
@@ -163,17 +164,31 @@ make_table <- function(pc, ed, jurisdictions, start, end)
            ed100     = paste0(format(round(fitted100, 1), nsmall = 1), "(",
                               format(round(lwr100, 1), nsmall = 1), " to ",
                               format(round(upr100, 1), nsmall = 1), ")")) %>%
-    select(date, jurisdiction, ed, ed100)
-    
-
-  tab <- left_join(tab1, tab2, by = c("date", "jurisdiction")) %>%
-    setNames(c("Date", "Jurisdiction", "PC (CI)", "CEM (CI)", "CEM per 100,000 (CI)")) %>%
-    mutate(Date = format(Date, "%B %d, %Y"))
+    select(date, jurisdiction, ed, ed100, fitted, fitted100) %>%
+    rename(edORDER    = fitted, 
+           ed100ORDER = fitted100)
   
-  DT::datatable(tab, 
-                rownames = FALSE,
-                options = list(dom = 't',
-                               pageLength = -1))
+  tab <- left_join(tab1, tab2, by = c("date", "jurisdiction")) %>%
+    setNames(c("dateORDER", "Jurisdiction", "PC (CI)", "pcORDER", "CEM (CI)", "CEM per 100,000 (CI)", "edORDER", "ed100ORDER")) %>%
+    mutate(Date = format(dateORDER, "%B %d, %Y")) %>%
+    select(Date, `Jurisdiction`, `PC (CI)`, `CEM (CI)`, `CEM per 100,000 (CI)`, dateORDER, pcORDER, edORDER, ed100ORDER) %>%
+    arrange(Jurisdiction, desc(dateORDER))
+  
+  tab <- DT::datatable(tab, rownames = FALSE,
+                options = list(dom = 't', pageLength = -1,
+                columnDefs = list(
+                  list(targets = 0, orderData = 5),
+                  list(targets = 2, orderData = 6),
+                  list(targets = 3, orderData = 7),
+                  list(targets = 4, orderData = 8),
+                  list(targets = 5, visible = FALSE),
+                  list(targets = 6, visible = FALSE),
+                  list(targets = 7, visible = FALSE),
+                  list(targets = 8, visible = FALSE),
+                  list(className = 'dt-right', targets = 0:4)))) %>%
+    DT::formatStyle(1:2,"white-space"="nowrap")
+  
+  return(tab)
 }
 
 ##

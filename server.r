@@ -5,6 +5,7 @@ load("rda/counts-usa.rda")
 load("rda/ft_counts.rda")
 states     <- sort(unique(percent_change$jurisdiction))
 countries  <- sort(unique(percent_change_countries$jurisdiction))
+### DO NOT DELETE ANY COMMENTS / COMMENTED LINES
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output, session) {
@@ -37,7 +38,7 @@ shinyServer(function(input, output, session) {
       select_at(colnames(percent_change_countries)) %>%
       bind_rows(percent_change_countries)
     
-    plot_percent_change(dat = both_dat, jurisdictions = input$both, start = input$range_both[1], end = input$range_both[2], ci_ind = input$`percent-change-both-CI`)
+    plot_percent_change(dat = both_dat, jurisdictions = input$both, start = input$range[1], end = input$range[2], ci_ind = input$`percent-change-both-CI`)
   })
 
   # -- Reactive dataset for excess deaths in US states
@@ -52,7 +53,7 @@ shinyServer(function(input, output, session) {
     tmp <- select(cdc_counts, -outcome_unweighted) %>%
       bind_rows(world_counts)
     
-    get_excess_deaths(dat = tmp, jurisdictions = input$both_edeaths, start = input$range_both_edeaths[1], end = input$range_both_edeaths[2])
+    get_excess_deaths(dat = tmp, jurisdictions = input$both, start = input$range[1], end = input$range[2])
     })
   
   # -- Excess deaths plot for US states  
@@ -67,7 +68,7 @@ shinyServer(function(input, output, session) {
   
   # -- Excess deaths plot for both
   output$excess_deaths_both <- renderPlot({
-    plot_excess_deaths(dat = reactive_excess_deaths_both(), jurisdictions = input$both_edeaths, start = input$range_both_edeaths[1], end = input$range_both_edeaths[2], ci_ind = input$`excess-deaths-both-CI`, pop_ind = input$`excess-deaths-both-POP`)
+    plot_excess_deaths(dat = reactive_excess_deaths_both(), jurisdictions = input$both, start = input$range[1], end = input$range[2], ci_ind = input$`excess-deaths-both-CI`, pop_ind = input$`excess-deaths-both-POP`)
   })
     
   # -- Data table
@@ -76,7 +77,7 @@ shinyServer(function(input, output, session) {
     # -- Excess deaths data
     tmp <- select(cdc_counts, -outcome_unweighted) %>%
       bind_rows(world_counts)
-    ed <- get_excess_deaths(dat = tmp, jurisdictions = input$both_data, start = input$range_both_data[1], end = input$range_both_data[2])
+    ed <- get_excess_deaths(dat = tmp, jurisdictions = input$both, start = input$range[1], end = input$range[2])
     
     # -- Percent change data
     pc <- percent_change %>%
@@ -85,25 +86,23 @@ shinyServer(function(input, output, session) {
       bind_rows(percent_change_countries)
     
     # -- Making table
-    make_table(pc, ed, jurisdictions = input$both_data, start = input$range_both_data[1], end = input$range_both_data[2])
+    make_table(pc, ed, jurisdictions = input$both, start = input$range[1], end = input$range[2])
   }, server = FALSE)
   
   # -- Function to switch between hidden tabs
-  switch_tab <- function(inputId, panel) {
+  switch_tab <- function(inputId, panel){
     updateTabsetPanel(session, panel, selected = inputId)
   }
   
-  # -- 
+  # -- To change panels
   observeEvent(input$`data-panel`, switch_tab("data", "global-panel"))
-  
   observeEvent(input$`pc-panel`, switch_tab("percent-change", "global-panel"))
-  observeEvent(input$c_states, switch_tab("within-percent-change-states", "within-percent-change"))
-  observeEvent(input$c_countries, switch_tab("within-percent-change-countries", "within-percent-change"))
-  observeEvent(input$c_both, switch_tab("within-percent-change-both", "within-percent-change"))
-  
+  # observeEvent(input$c_states, switch_tab("within-percent-change-states", "within-percent-change"))
+  # observeEvent(input$c_countries, switch_tab("within-percent-change-countries", "within-percent-change"))
+  # observeEvent(input$c_both, switch_tab("within-percent-change-both", "within-percent-change"))
   observeEvent(input$`ed-panel`, switch_tab("excess-deaths", "global-panel"))
-  observeEvent(input$c_states_edeaths, switch_tab("within-excess-deaths-states", "within-excess-deaths"))
-  observeEvent(input$c_countries_edeaths, switch_tab("within-excess-deaths-countries", "within-excess-deaths"))
-  observeEvent(input$c_both_edeaths, switch_tab("within-excess-deaths-both", "within-excess-deaths"))
+  # observeEvent(input$c_states_edeaths, switch_tab("within-excess-deaths-states", "within-excess-deaths"))
+  # observeEvent(input$c_countries_edeaths, switch_tab("within-excess-deaths-countries", "within-excess-deaths"))
+  # observeEvent(input$c_both_edeaths, switch_tab("within-excess-deaths-both", "within-excess-deaths"))
 })
 
