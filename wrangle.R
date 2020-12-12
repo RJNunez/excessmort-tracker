@@ -534,7 +534,6 @@ counts_tmp <- cdc_counts %>%
   mutate(covid19 = c(NA, diff(covid19))) %>%
   select(date, outcome, covid19, jurisdiction, population)
 
-
 # -- Adding COVID-19 to world counts
 world_counts <- eudat %>%
   right_join(world_counts, by = c("date", "country" = "jurisdiction")) %>%
