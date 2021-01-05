@@ -138,7 +138,8 @@ rm(covid_nyc, ny)
 # -- Renaming
 cdc_counts <- covid_states %>%
   rename(covid19 = death) %>%
-  right_join(dat, by = c("date", "jurisdiction")) #%>%
+  right_join(dat, by = c("date", "jurisdiction")) %>%
+  filter(!jurisdiction %in% c("Connecticut", "North Carolina"))#%>%
   # group_by(jurisdiction) %>%
   # mutate(covid19_daily = c(NA, diff(covid19))) %>%
   # ungroup()
@@ -388,10 +389,11 @@ dat <- filter(dat, country == region) %>%
   rename(outcome = deaths) %>%
   mutate(country = case_when(country=="US" ~ "United States of America",
                              country=="UK" ~ "United Kingdom",
-                             TRUE ~ country))
+                             TRUE ~ country)) %>%
+  unique()
 
 # -- Available countries
-countries <- unique(dat$country)
+countries <- c(unique(dat$country), "Guatemala", "Canada")
 
 # -- Loading population level data
 pop <- read_excel("data/WPP2019_POP_F01_1_TOTAL_POPULATION_BOTH_SEXES.xlsx")
@@ -418,7 +420,49 @@ pop <- approx_demographics(pop,
                            by        = c("year", "country"))
 
 # -- Putting everything together
-counts <- left_join(dat, pop, by=c("date", "country"))
+counts <- inner_join(dat, pop, by=c("date", "country")) %>%
+  select(-expected_deaths) %>%
+  filter(country != "Canada")
+  
+# -- Wrangling Guatemala 
+
+# -- Wrangling Canada 
+ca <- get_cansim("13-10-0768") %>%
+  normalize_cansim_values(factors=TRUE) %>% 
+  filter(`Age at time of death` == "Age at time of death, all ages",
+         Sex                    == "Both sexes",
+         Characteristics        == "Number of deaths",
+         GEO                    == "Canada, place of occurrence") %>%
+  mutate(country = "Canada") %>%
+  rename(date = Date, outcome = VALUE) %>%
+  select(date, outcome, country) %>%
+  mutate(year  = year(date),
+         month = month(date)) %>%
+  unique()
+
+
+ca %>%
+  filter(year(date) == 2020) %>%
+  arrange(date)
+
+ca_pop <- get_cansim("14-10-0293") %>%
+  normalize_cansim_values(factors=TRUE) %>%
+  filter(`Labour force characteristics` == "Population",
+         GEO                            == "Canada") %>%
+  select(Date, VALUE) %>%
+  rename(date = Date, population = VALUE) %>%
+  mutate(year  = year(date),
+         month = month(date)) %>%
+  select(-date) %>%
+  unique()
+
+ca <- left_join(ca, ca_pop, by = c("year", "month")) %>%
+  select(date, outcome, country, population) %>%
+  na.omit()
+
+# -- Putting everything together
+counts    <- rbind(counts, ga, ca)
+countries <- sort(unique(counts$country))
 
 # -- Control and exclude dates
 exclude       <- seq(make_date(2020, 01, 01), make_date(2020, 12, 31), "days")
@@ -426,7 +470,7 @@ control_dates <- seq(make_date(2010, 01, 01), make_date(2019, 12, 31), "days")
 
 # -- Computing percent_change
 percent_change_countries <- map_df(countries, function(x){
-  
+  print(x)
   fit <- suppressMessages(counts %>%
                             filter(country == x) %>%
                             arrange(date) %>%
@@ -447,30 +491,30 @@ percent_change_countries <- map_df(countries, function(x){
            country = x)
 })
 
-# -- Computing excess deaths
-excess_deaths_countries <- map_df(countries, function(x){
-  
-  fit <- suppressMessages(counts %>%
-                            filter(country == x) %>%
-                            arrange(date) %>%
-                            
-                            excess_model(.,
-                                         start                = make_date(2020, 03, 01),
-                                         end                  = today(),
-                                         exclude              = exclude,
-                                         control.dates        = control_dates,
-                                         aic            = FALSE, 
-                                         order.max      = 7,
-                                         weekday.effect = FALSE,
-                                         verbose        = FALSE))
-  
-  
-  excess_cumulative(fit, start = make_date(2020, 01, 01), end = make_date(2020, 06, 30)) %>%
-    mutate(country = x) %>%
-    mutate(lwr = fitted - 1.96 * se, 
-           upr = fitted + 1.96 * se)
-}) %>%
-  as_tibble()
+# # -- Computing excess deaths
+# excess_deaths_countries <- map_df(countries, function(x){
+#   
+#   fit <- suppressMessages(counts %>%
+#                             filter(country == x) %>%
+#                             arrange(date) %>%
+#                             
+#                             excess_model(.,
+#                                          start                = make_date(2020, 03, 01),
+#                                          end                  = today(),
+#                                          exclude              = exclude,
+#                                          control.dates        = control_dates,
+#                                          aic            = FALSE, 
+#                                          order.max      = 7,
+#                                          weekday.effect = FALSE,
+#                                          verbose        = FALSE))
+#   
+#   
+#   excess_cumulative(fit, start = make_date(2020, 01, 01), end = make_date(2020, 06, 30)) %>%
+#     mutate(country = x) %>%
+#     mutate(lwr = fitted - 1.96 * se, 
+#            upr = fitted + 1.96 * se)
+# }) %>%
+#   as_tibble()
 
 # -- Loading covid19 data from european center for disease control (ECDC)
 eudat <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv",
@@ -478,19 +522,19 @@ eudat <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv"
                   fileEncoding = "UTF-8-BOM") %>%
   as_tibble() %>%
   mutate(date = dmy(dateRep)) %>%
-  select(date, cases, deaths, countriesAndTerritories, popData2019) %>%
+  select(date, deaths_weekly, countriesAndTerritories, popData2019) %>%
   rename(country = countriesAndTerritories) %>%
   arrange(date, country) %>%
-  filter(deaths >= 0) %>%
+  filter(deaths_weekly >= 0) %>%
   group_by(country) %>%
-  mutate(covid19 = cumsum(deaths),
+  mutate(covid19 = cumsum(deaths_weekly),
          country = gsub("_", " ", country)) %>%
   ungroup() %>%
-  select(date, country, deaths, covid19)
+  select(date, country, deaths_weekly, covid19)
 
 # -- All countries
-excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date", "country")) %>%
-  select(-deaths)
+# excess_deaths_countries <- left_join(excess_deaths_countries, eudat, by=c("date", "country")) %>%
+#   select(-deaths_weekly)
 
 # -- Using CDC usa data (percent change)
 usa_temp <- percent_change_usa %>%
@@ -501,12 +545,12 @@ usa_temp <- percent_change_usa %>%
   mutate(country = "United States")
 
 # -- Using CDC usa data (excess deaths)
-ed_temp <- excess_deaths_usa %>%
-  # filter(type == "CDC weighted") %>%
-  # mutate(lwr = fitted - 1.96 * se, 
-  #        upr = fitted + 1.96 * se) %>%
-  mutate(country = "United States") %>%
-  select(date, observed, sd, fitted, se, country, lwr, upr, covid19)
+# ed_temp <- excess_deaths_usa %>%
+#   # filter(type == "CDC weighted") %>%
+#   # mutate(lwr = fitted - 1.96 * se, 
+#   #        upr = fitted + 1.96 * se) %>%
+#   mutate(country = "United States") %>%
+#   select(date, observed, sd, fitted, se, country, lwr, upr, covid19)
 
 # -- Adding it to percent change
 percent_change_countries <- percent_change_countries %>%
@@ -514,13 +558,13 @@ percent_change_countries <- percent_change_countries %>%
   bind_rows(usa_temp)
 
 # -- Adding it to excess deaths
-excess_deaths_countries <- excess_deaths_countries %>%
-  filter(country != "United States of America") %>%
-  bind_rows(ed_temp)
+# excess_deaths_countries <- excess_deaths_countries %>%
+#   filter(country != "United States of America") %>%
+#   bind_rows(ed_temp)
 
 # -- Renaming columns
 percent_change_countries <- rename(percent_change_countries, jurisdiction = country)
-excess_deaths_countries  <- rename(excess_deaths_countries, jurisdiction = country)
+# excess_deaths_countries  <- rename(excess_deaths_countries, jurisdiction = country)
 world_counts             <- rename(counts, jurisdiction = country)
 
 # -- Getting USA data from CDC
@@ -531,15 +575,22 @@ counts_tmp <- cdc_counts %>%
             covid19    = sum(covid19, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(jurisdiction = "United States") %>%
-  mutate(covid19 = c(NA, diff(covid19))) %>%
+  mutate(date = date + 1) %>%
   select(date, outcome, covid19, jurisdiction, population)
+
+# -- I found a bug with dates and do this to fix it
+world_counts <- world_counts %>%
+  mutate(date = ceiling_date(date, unit = "week"))
+eudat <- eudat %>%
+  mutate(date = floor_date(date, unit = "week"))
+percent_change_countries <- percent_change_countries %>%
+  mutate(date = ceiling_date(date, unit = "week"))
 
 # -- Adding COVID-19 to world counts
 world_counts <- eudat %>%
   right_join(world_counts, by = c("date", "country" = "jurisdiction")) %>%
   rename(jurisdiction = country) %>%
-  select(date, outcome, covid19, jurisdiction, population) %>%
-  mutate(covid19 = c(NA, diff(covid19)))
+  select(date, outcome, covid19, jurisdiction, population)
 
 # -- Adding USA to world counts
 world_counts <- counts_tmp %>%
@@ -548,7 +599,7 @@ world_counts <- counts_tmp %>%
 
 # -- Save
 the_stamp <- now()
-save(world_counts, percent_change_countries, excess_deaths_countries, the_stamp, file = "rda/ft_counts.rda", compress = "xz")
+save(world_counts, percent_change_countries, the_stamp, file = "rda/ft_counts.rda", compress = "xz")
 ##############################################################################################
 ### --------------------------------- END WRANGLE FT DATA -------------------------------- ###
 ##############################################################################################

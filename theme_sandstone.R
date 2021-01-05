@@ -6,7 +6,7 @@ theme_sandstone = function(base_size = 12, base_family = "") {
       # Specify axis options
       axis.line         = element_blank(),
       axis.text.x       = element_text(size = base_size, color = "#525252", lineheight = 0.9),
-      axis.text.y       = element_text(size = base_size, color = "#525252", lineheight = 0.9),
+      axis.text.y       = element_text(size = base_size, color = "#525252", lineheight = 0.9, hjust = 0.95),
       axis.ticks        = element_line(color = "#e0cfb6", size  =  0.2),
       axis.title.x      = element_text(face="bold", size = base_size, color = "#525252", margin = margin(0, 10, 0, 0)),
       axis.title.y      = element_text(face="bold", size = base_size, color = "#525252", angle = 90, margin = margin(0, 10, 0, 0)),
@@ -41,6 +41,7 @@ theme_sandstone = function(base_size = 12, base_family = "") {
       
       # Specify plot options
       plot.background = element_rect(color = "#525252", fill = "#e6dccd"),
-      plot.title      = element_text(size = base_size*1.2, color = "#525252")
+      plot.title      = element_text(face = "bold", size = base_size*1.20, color = "#525252"),
+      plot.subtitle   = element_text(face = "bold", size = base_size*0.80, color = "#525252")
     )
 }

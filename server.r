@@ -1,18 +1,53 @@
-source("init.R")
 source("functions.R")
-load("rda/cdc_counts.rda")
-load("rda/counts-usa.rda")
-load("rda/ft_counts.rda")
-states     <- sort(unique(percent_change$jurisdiction))
-countries  <- sort(unique(percent_change_countries$jurisdiction))
+source("init.R")
 ### DO NOT DELETE ANY COMMENTS / COMMENTED LINES
 
-# Define server logic required to draw a histogram
+# -- Shiny server
 shinyServer(function(input, output, session) {
 
   # -- Date and time of latest update
   output$stamp = renderUI({
     p(em(paste("Last updated on:", format(the_stamp, "%B %d, %Y"), "at",format(the_stamp, "%I:%m %p"))), align = "center", style = "font-family: 'arial'; font-size: 9pt; color:#969696")
+  })
+  
+  # -- Title for worse percent change
+  output$percent_change_worse_title = renderUI({
+    h3(paste0("Six worst US states on the week ending on ", format(input$range[2], "%B %d, %Y")), align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa")
+  })
+  
+  # -- Title for worse excess deaths
+  output$excess_deaths_worse_title = renderUI({
+    h3(paste0("Six worst US states on the week ending on ", format(input$range[2], "%B %d, %Y")), align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa")
+  })
+  
+  # -- US map percent change animation
+  output$us_map <- renderPlot({
+    plot_us_map(percent_change = percent_change, us_map = us_map, temp_date = input$map_usa_date)
+  })
+  
+  # -- US map excess deaths animation
+  output$us_ed_map <- renderPlot({
+    plot_us_map_ed(usa_ed_dat, us_map, temp_date = input$map_usa_ed_date)
+  })
+  
+  # -- World map percent change animation
+  output$world_map <- renderPlot({
+    plot_world_map(pc = percent_change_countries, map = world, temp_date = input$map_world_date)
+  })
+  
+  # -- World map excess deaths animation
+  output$world_ed_map <- renderPlot({
+    plot_world_map_ed(world_ed_dat, map = world, temp_date = input$map_world_ed_date)
+  })
+  
+  # -- Percent excess vs covid in US states
+  output$excess_v_covid_usa <- renderPlot({
+    plot_excess_v_covid(dat = cdc_counts, pc = filter(percent_change, type == "weighted"))
+  })
+  
+  # -- Percent excess vs covid in countires
+  output$excess_v_covid_world <- renderPlot({
+    plot_excess_v_covid(dat = world_counts, pc = percent_change_countries)
   })
 
   # -- Percent change plot for US states  
@@ -23,6 +58,11 @@ shinyServer(function(input, output, session) {
   # -- Plot of worse states in USA
   output$percent_change_usa_worse <- renderPlot({
     plot_worse_percent_change(dat = filter(percent_change, type == "weighted"), start = input$range[1], end = input$range[2])
+  })
+  
+  # -- Plot of excess mortality of worse states in USA 
+  output$excess_mortality_usa_worse <- renderPlot({
+    plot_worse_excess_deaths(dat = cdc_counts, pc = filter(percent_change, type == "weighted"), start = input$range[1], end = input$range[2])
   })
   
   # -- Percent change plot for countries
@@ -68,7 +108,7 @@ shinyServer(function(input, output, session) {
   
   # -- Excess deaths plot for both
   output$excess_deaths_both <- renderPlot({
-    plot_excess_deaths(dat = reactive_excess_deaths_both(), jurisdictions = input$both, start = input$range[1], end = input$range[2], ci_ind = input$`excess-deaths-both-CI`, pop_ind = input$`excess-deaths-both-POP`)
+    plot_excess_deaths(dat = reactive_excess_deaths_both(), jurisdictions = input$both, start = input$range[1], end = input$range[2], ci_ind = input$`excess-deaths-both-CI`, pop_ind = input$`excess-deaths-both-POP`, c19_ind = input$`excess-deaths-both-C19`)
   })
     
   # -- Data table

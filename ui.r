@@ -1,16 +1,11 @@
-source("init.R")
 source("functions.R")
-load("rda/cdc_counts.rda")
-load("rda/counts-usa.rda")
-load("rda/ft_counts.rda")
-states     <- sort(unique(percent_change$jurisdiction))
-countries  <- sort(unique(percent_change_countries$jurisdiction))
+source("init.R")
 button_style <- "color: black; background-color: rgb(230, 220, 205); position: relative; 
                      text-align:center; border-radius: 6px; border-width: 2px; font-family: 'helvetica'; font-weight: bold"
 ### DO NOT DELETE ANY COMMENTS / COMMENTED LINES
 
 shinyUI(fluidPage(theme = shinytheme("sandstone"),
-  
+
     # -- Meta data
     tags$head(
       tags$meta(name="description", content="Excess Mortality Tracker"),
@@ -90,113 +85,20 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
     tabPanel("data",
 
              br(),
-
-             # fluidRow(
-             #   # -- Jurisdiction input
-             #   column(6, align = "center",
-             #          selectizeInput("both",#"both_data",
-             #                         label    = "Jurisdiction:",
-             #                         choices  = sort(c(countries, states)),
-             #                         selected = c("United States", "United Kingdom"),
-             #                         multiple = TRUE,
-             #                         options  = list(maxItems    = 5,
-             #                                         placeholder = "Choose a jurisdiction"))),
-             # 
-             #   # -- Date range input
-             #   column(6, align = "center",
-             #          dateRangeInput("range_both_data", "Period",
-             #                         start  = make_date(2020,03,01),
-             #                         end    = max(percent_change_usa$date),
-             #                         min    = make_date(2020, 01, 01),
-             #                         format = "M-dd-yyyy",
-             #                         max    = max(percent_change_usa$date)))),
+             p("•PC  = Percent change", align = "justify", style = "font-family: 'helvetica'; font-size: 8pt; color:#969696"),
+             p("•C19 = Covid-19 reported death toll", align = "justify", style = "font-family: 'helvetica'; font-size: 8pt; color:#969696"),
+             p("•CI  = 95% confidence interval", align = "justify", style = "font-family: 'helvetica'; font-size: 8pt; color:#969696"),
+             p("•CEM = Cumulative excess mortality", align = "justify", style = "font-family: 'helvetica'; font-size: 8pt; color:#969696"),
 
              DT::dataTableOutput("table")),
 
     # -- Percent change panel
     tabPanel("percent-change",
              
-             # # -- Text to briefly explain inputs, data, and graphics
-             # br(),
-             # p("Here you can compare percent changes in mortality for US states or countries around the world.", align = "center", style = "font-family: 'helvetica'; font-size: 10pt ; color:#969696"),
-             # 
-             # # -- Input: Countries, US states, or world cities
-             # fluidRow(align = "center",
-             #          actionButton("c_states", "US States", style = button_style),
-             #          actionButton("c_both", "Both", style = button_style),
-             #          actionButton("c_countries", "Countries", style = button_style)),
-             
              tabsetPanel(
                id   = "within-percent-change",
                type = "hidden",
             
-               # tabPanel("within-percent-change-states",
-               #          
-               #          # -- Text to briefly explain inputs, data, and graphics
-               #          br(),
-               #          # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"),
-               #          
-               #          # -- Inputs
-               #          fluidRow(
-               #            # -- Jurisdiction input
-               #            column(4, align = "center",
-               #                   selectizeInput("state",
-               #                                  label    = "Jurisdiction:",
-               #                                  choices  = states,
-               #                                  selected = c("Massachusetts", "Florida"),
-               #                                  multiple = TRUE,
-               #                                  options  = list(maxItems    = 5,
-               #                                                  placeholder = "Choose a state"))),
-               #            
-               #            column(4, align = "center",
-               #                   checkboxInput("percent-change-states-CI", "Add 95% Confidence interval", 
-               #                                 value = FALSE)),
-               #            
-               #            # -- Date range input
-               #            column(4, align = "center",
-               #                   dateRangeInput("range", "Period",
-               #                                  start  = make_date(2020,03,01),
-               #                                  end    = max(cdc_counts$date),
-               #                                  min    = min(cdc_counts$date),
-               #                                  format = "M-dd-yyyy",
-               #                                  max    = max(cdc_counts$date)))),
-               #          
-               #          plotOutput("percent_change_usa"),
-               #          br(),
-               #          plotOutput("percent_change_usa_worse")), # End of tabPanel: within-percent-change-states
-               
-               # tabPanel("within-percent-change-countries",
-               #          
-               #          # -- Text to briefly explain inputs, data, and graphics
-               #          br(),
-               #          # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"),
-               #          
-               #          fluidRow( 
-               #            # -- Jurisdiction input
-               #            column(4, align = "center",
-               #                     selectizeInput("countries",
-               #                                    label    = "Jurisdiction:",
-               #                                    choices  = countries,
-               #                                    selected = c("United States", "United Kingdom"),
-               #                                    multiple = TRUE,
-               #                                    options  = list(maxItems    = 5,
-               #                                                    placeholder = "Choose a country"))),
-               #            
-               #            column(4, align = "center",
-               #                   checkboxInput("percent-change-countries-CI", "Add 95% Confidence interval", 
-               #                                 value = FALSE)),
-               #            
-               #              # -- Date range input
-               #              column(4, align = "center",
-               #                     dateRangeInput("range_countries", "Period",
-               #                                    start  = make_date(2020,03,01),
-               #                                    end    = max(percent_change_countries$date),
-               #                                    min    = make_date(2020, 01, 01),
-               #                                    format = "M-dd-yyyy",
-               #                                    max    = max(percent_change_countries$date)))),
-               # 
-               #          plotOutput("percent_change_countries")), # End of tabPanel: within-percent-change-countries
-               
                tabPanel("within-percent-change-both",
 
                         fluidRow(
@@ -210,105 +112,70 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                           # -- Date range input
                           column(4, align = "center")),
                         
-                        plotOutput("percent_change_both")) # End of tabPanel: within-percent-change-both
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Percent change from average mortality", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        p("• You can choose up to five jurisdictions with ", code("Jurisdiction"), "and change the period of interest with ", code("Period"),
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The solid curve represents percent change from average mortality. You can add confidence intervals with ", code("Add 95% confidence interval"),
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        plotOutput("percent_change_both"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        uiOutput("percent_change_worse_title"),
+                                        p("• These six states have the top percent increases in mortality", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The solid curve represents percent change from average mortality and the shaded area is a 95% confidence interval", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• Red represents upward trends in mortality and blue correponds to downward trends", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• You can change the date of interest with ", code("Period"), align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        plotOutput("percent_change_usa_worse"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Transition maps of percent increase in mortality", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        sliderTextInput("map_usa_date",
+                                                        label    = "",
+                                                        choices  = format(sort(unique(filter(percent_change, date >= "2020-03-01")$date)), "%b %d, %Y"),
+                                                        selected = format(sort(unique(filter(percent_change, date >= "2020-03-01")$date))[1], "%b %d, %Y"),
+                                                        grid     = FALSE,
+                                                        animate  = animationOptions(interval = 1000, loop = FALSE))),
+                                 column(2)),
+                        plotOutput("us_map"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        sliderTextInput("map_world_date",
+                                                        label    = "",
+                                                        choices  = format(sort(unique(filter(percent_change_countries, date >= "2020-03-01")$date)), "%b %d, %Y"),
+                                                        selected = format(sort(unique(filter(percent_change_countries, date >= "2020-03-01")$date))[1], "%b %d, %Y"),
+                                                        grid     = FALSE,
+                                                        animate  = animationOptions(interval = 1000, loop = FALSE))),
+                                 column(2)),
+                        plotOutput("world_map")) # End of tabPanel: within-percent-change-both
              )), # End of tabsetPanel: within-percent-change
-             
+
     tabPanel("excess-deaths",
 
-             # # -- Text to briefly explain inputs, data, and graphics
-             # br(),
-             # p("Here you can compare excess mortality trends for US states or countries around the world.", align = "center", style = "font-family: 'helvetica'; font-size: 10pt ; color:#969696"),
-             # 
-             # # -- Input: Countries, US states, or world cities
-             # fluidRow(align = "center",
-             #          actionButton("c_states_edeaths", "US States", style = button_style),
-             #          actionButton("c_both_edeaths", "Both", style = button_style),
-             #          actionButton("c_countries_edeaths", "Countries", style = button_style)),
-             
              tabsetPanel(
                id   = "within-excess-deaths",
                type = "hidden", 
-               
-               # tabPanel("within-excess-deaths-states",
-               #          
-               #          # -- Text to briefly explain inputs, data, and graphics
-               #          # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"), 
-               #          br(),
-               #          # -- Inputs
-               #          fluidRow(
-               #            # -- Jurisdiction input
-               #            column(4, align = "center",
-               #                   selectizeInput("state_edeaths",
-               #                                  label    = "Jurisdiction:",
-               #                                  choices  = states,
-               #                                  selected = c("Massachusetts", "Florida"),
-               #                                  multiple = TRUE,
-               #                                  options  = list(maxItems    = 5,
-               #                                                  placeholder = "Choose a state"))),
-               #            
-               #            column(2, align = "center",
-               #                   checkboxInput("excess-deaths-states-CI", "Add 95% Confidence interval", 
-               #                                 value = FALSE)),
-               #            
-               #            column(2, align = "left",
-               #                   radioButtons("excess-deaths-states-POP", "Excess deaths:", 
-               #                                choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
-               #            
-               #            # -- Date range input
-               #            column(4, align = "center",
-               #                   dateRangeInput("range_edeaths", "Period",
-               #                                  start  = make_date(2020,03,01),
-               #                                  end    = max(cdc_counts$date),
-               #                                  min    = make_date(2020,01,01),
-               #                                  format = "M-dd-yyyy",
-               #                                  max    = max(cdc_counts$date)))),
-               #          
-               #          plotOutput("excess_deaths_usa")), # End of tabpanel: within-excess-deaths-states
-               
-               # tabPanel("within-excess-deaths-countries",
-               #          
-               #          # -- Text to briefly explain inputs, data, and graphics
-               #          # p("Add a brief description of the data and figures here", align = "center", style = "font-family: 'helvetica'; font-size: 12pt ; color:black"), 
-               #          br(),
-               #          fluidRow(
-               #            # -- Jurisdiction input
-               #            column(4, align = "center",
-               #                   selectizeInput("countries_edeaths",
-               #                                  label    = "Jurisdiction:",
-               #                                  choices  = countries,
-               #                                  selected = c("United States", "United Kingdom"),
-               #                                  multiple = TRUE,
-               #                                  options  = list(maxItems    = 5,
-               #                                                  placeholder = "Choose a country"))),
-               #            
-               #            column(2, align = "center",
-               #                   checkboxInput("excess-deaths-countries-CI", "Add 95% Confidence interval", 
-               #                                 value = FALSE)),
-               #            
-               #            column(2, align = "left",
-               #                   radioButtons("excess-deaths-countries-POP", "Per 100,000", 
-               #                                choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
-               #            
-               #            # -- Date range input
-               #            column(4, align = "center",
-               #                   dateRangeInput("range_countries_edeaths", "Period",
-               #                                  start  = make_date(2020,03,01),
-               #                                  end    = max(percent_change_countries$date),
-               #                                  min    = make_date(2020,01,01),
-               #                                  format = "M-dd-yyyy",
-               #                                  max    = max(percent_change_countries$date)))),
-               #          
-               #          plotOutput("excess_deaths_countries")), # End of tabpanel: within-excess-deaths-states
                
                tabPanel("within-excess-deaths-both",
 
                         # -- Inputs
                         fluidRow(
                           # -- Jurisdiction input
-                          column(4, align = "center"),
+                          column(3, align = "center"),
                           
                           column(2, align = "center",
                                  checkboxInput("excess-deaths-both-CI", "Add 95% Confidence interval", 
+                                               value = FALSE)),
+                          
+                          
+                          column(2, align = "center",
+                                 checkboxInput("excess-deaths-both-C19", "Add Covid-19 death toll", 
                                                value = FALSE)),
                           
                           column(2, align = "left",
@@ -316,9 +183,73 @@ shinyUI(fluidPage(theme = shinytheme("sandstone"),
                                               choices = c("Per 100,000", "Totals"), selected = "Per 100,000")),
                           
                           # -- Date range input
-                          column(4, align = "center")),
+                          column(3, align = "center")),
                         
-                        plotOutput("excess_deaths_both")) # End of tabpanel: within-excess-deaths-both
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Cumulative excess mortality", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        p("• You can choose up to five jurisdictions with ", code("Jurisdiction"), "and change the period of interest with ", code("Period"),
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The solid curve represents percent change from average mortality. You can add confidence intervals with ", code("Add 95% confidence interval"),
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• You can visualize excess mortality in counts or per 100,000 using the ",code("Per 100,000"), " radio buttos above",
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• You can add the reported Covid-19 death toll with ", code("Add Covid-19 death toll"), ". If so, the Covid-19 death toll is represented with dash curves",
+                                          align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        plotOutput("excess_deaths_both"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        uiOutput("excess_deaths_worse_title"),
+                                        p("• These six states have the top percent increases in mortality and are the same as those presented in the Percent Increase in Mortality tab", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The solid curve represents cumulative excess mortality per 100,000 since March 1, 2020, and the shaded area is a 95% confidence interval", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The dash curve represents the cumulative Covid-19 death toll per 100,000 since March 1, 2020", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• Red represents upward trends in mortality and blue correponds to downward trends (these trends are based on changes from average mortality)", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• You can change the date of interest with ", code("Period"), align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        plotOutput("excess_mortality_usa_worse"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Unaccounted deaths in US states", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        p("• The figure below shows the difference between cumulative excess deaths and the cumulative Covid-19 death toll per 100,000 since March 1, 2020, for each US state", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The bars represent 95% confidence intervals", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• Red represents upward trends in mortality and blue correponds to downward trends (these trends are based on changes from average mortality)", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        plotOutput("excess_v_covid_usa", height = "600px"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Unaccounted deaths in multiple countries", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        p("• The figure below shows the difference between cumulative excess deaths and the cumulative Covid-19 death toll per 100,000 since March 1, 2020 for a myriad of countries", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black"),
+                                        p("• The bars and colors have the same interpretation as above", align = "justify", style = "font-family: 'helvetica'; font-size: 12pt; color:black")),
+                                 column(2)),
+                        p("*The range of data for different countries is not necessarily the same", align = "justify", style = "font-family: 'helvetica'; font-size: 8pt; color:#969696"),
+                        plotOutput("excess_v_covid_world", height = "600px"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        h3("Transition maps of cumulative excess mortality", align = "left", style = "font-family: 'helvetica'; color:black; text-shadow: 1px 1px 1px #aaa"),
+                                        sliderTextInput("map_usa_ed_date",
+                                                        label    = "",
+                                                        choices  = format(sort(unique(filter(percent_change, date >= "2020-03-01")$date)), "%b %d, %Y"),
+                                                        selected = format(sort(unique(filter(percent_change, date >= "2020-03-01")$date))[1], "%b %d, %Y"),
+                                                        grid     = FALSE,
+                                                        animate  = animationOptions(interval = 800, loop = FALSE))),
+                                 column(2)),
+                        plotOutput("us_ed_map"),
+                        br(),
+                        fluidRow(column(2),
+                                 column(8, align = "center",
+                                        sliderTextInput("map_world_ed_date",
+                                                        label    = "",
+                                                        choices  = format(sort(unique(filter(world_counts, date >= "2020-03-01")$date)), "%b %d, %Y"),
+                                                        selected = format(sort(unique(filter(world_counts, date >= "2020-03-01")$date))[1], "%b %d, %Y"),
+                                                        grid     = FALSE,
+                                                        animate  = animationOptions(interval = 800, loop = FALSE))),
+                                 column(2)),
+                        plotOutput("world_ed_map")) # End of tabpanel: within-excess-deaths-both
              ) # End of tabsetPanel: within-excess-deaths
         ) # End of tabPanel: excess-deaths
     ), # End of tabsetPanel: global-panel
