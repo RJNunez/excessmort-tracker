@@ -30,10 +30,12 @@ get_excess_deaths <- function(dat, jurisdictions, start, end)
   
   # -- Computing excess deaths
   eds <- map_df(jurs, function(x){
-    
+    print(x)
     if(x == "Puerto Rico") {
       fit <- dat %>%
         filter(jurisdiction == x) %>%
+        select(date, outcome, population) %>%
+        na.omit() %>%
         arrange(date) %>%
         excess_model(.,
                      start          = start,
@@ -48,6 +50,8 @@ get_excess_deaths <- function(dat, jurisdictions, start, end)
       
       fit <- dat %>%
         filter(jurisdiction == x) %>%
+        select(date, outcome, population) %>%
+        na.omit() %>%
         arrange(date) %>%
         excess_model(.,
                      start          = start,
@@ -66,12 +70,12 @@ get_excess_deaths <- function(dat, jurisdictions, start, end)
              upr = fitted + 1.96 * se)
   }) %>%
     as_tibble() %>%
-    left_join(select(dat, date, jurisdiction, covid19, population), by = c("date", "jurisdiction")) %>%
+    left_join(select(dat, date, jurisdiction, covid_deaths, population), by = c("date", "jurisdiction")) %>%
     group_by(jurisdiction) %>%
-    mutate(covid19 = ifelse(is.na(covid19), 0, covid19)) %>%
-    mutate(covid19 = c(0, diff(covid19))) %>%
-    mutate(covid19 = ifelse(covid19 < 0, 0, covid19)) %>%
-    mutate(covid19 = cumsum(covid19)) %>%
+    mutate(covid_deaths = ifelse(is.na(covid_deaths), 0, covid_deaths)) %>%
+    mutate(covid_deaths = c(0, diff(covid_deaths))) %>%
+    mutate(covid_deaths = ifelse(covid_deaths < 0, 0, covid_deaths)) %>%
+    mutate(covid_deaths = cumsum(covid_deaths)) %>%
     ungroup()
   
   # -- To be returned
@@ -150,8 +154,8 @@ make_table <- function(pc, ed, jurisdictions, start, end)
            se100     = 100000 / population * se,
            lwr100    = fitted100 - se100 * 1.96,
            upr100    = fitted100 + se100 * 1.96,
-           covid100  = 100000 * covid19 / population,
-           d         = fitted - covid19,
+           covid100  = 100000 * covid_deaths / population,
+           d         = fitted - covid_deaths,
            d100      = fitted100 - covid100,
            lwrd      = d - 1.96 * se, 
            uprd      = d + 1.96 * se, 
@@ -160,7 +164,7 @@ make_table <- function(pc, ed, jurisdictions, start, end)
            fitted    = prettyNum(round(fitted), big.mark = ","),
            lwr       = prettyNum(round(lwr), big.mark = ","),
            upr       = prettyNum(round(upr), big.mark = ","),
-           c19       = prettyNum(round(covid19), big.mark = ","),
+           c19       = prettyNum(round(covid_deaths), big.mark = ","),
            c19100    = format(round(covid100, 1), nsmall = 1),
            dif       = prettyNum(round(d), big.mark = ","),
            lwrd      = prettyNum(round(lwrd), big.mark = ","),
@@ -177,10 +181,10 @@ make_table <- function(pc, ed, jurisdictions, start, end)
            dif100    = paste0(format(round(d100, 1), nsmall = 1), "(",
                               format(round(lwrd100, 1), nsmall = 1), " to ",
                               format(round(uprd100, 1), nsmall = 1), ")")) %>%
-    select(date, jurisdiction, c19, c19100, ed, ed100, dif, dif100, fitted, fitted100, covid19, covid100, d, d100) %>%
+    select(date, jurisdiction, c19, c19100, ed, ed100, dif, dif100, fitted, fitted100, covid_deaths, covid100, d, d100) %>%
     rename(edORDER     = fitted, 
            ed100ORDER  = fitted100,
-           c19ORDER    = covid19,
+           c19ORDER    = covid_deaths,
            c19100ORDER = covid100,
            dORDER      = d,
            d100ORDER   = d100)
@@ -307,7 +311,7 @@ plot_worse_excess_deaths <- function(dat, pc, start, end)
   # -- Viz
   ed %>%
     mutate(fitted100  = 100000 * fitted / population,
-           covid19100 = 100000 * covid19/ population,
+           covid_deaths100 = 100000 * covid_deaths/ population,
            se100      = 100000 / population * se,
            lwr100     = fitted100 - se100 * 1.96,
            upr100     = fitted100 + se100 * 1.96) %>%
@@ -317,7 +321,7 @@ plot_worse_excess_deaths <- function(dat, pc, start, end)
     mutate(jurisdiction = factor(jurisdiction, levels = top_worse)) %>%
     left_join(labels, by = "jurisdiction") %>%
     ggplot(aes(date, fitted100, color=change, fill=change)) +
-    geom_line(aes(date, covid19100), lty=2, show.legend = FALSE) +
+    geom_line(aes(date, covid_deaths100), lty=2, show.legend = FALSE) +
     geom_ribbon(aes(ymin=lwr100, ymax=upr100), alpha=0.20, color=NA, show.legend = FALSE) +
     geom_line(show.legend = FALSE) +
     geom_dl(aes(color=change, label=paste0("",round(last_fitted,1))), method=list("last.points", fontface="bold", cex=0.90)) +
@@ -340,7 +344,7 @@ plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind, 
            date >= start, date <= end) %>%
     mutate(jurisdiction = factor(jurisdiction, levels = jurisdictions)) %>%
     mutate(fitted100  = 100000 * fitted / population,
-           covid19100 = 100000 * covid19/ population,
+           covid_deaths100 = 100000 * covid_deaths/ population,
            se100      = 100000 / population * se,
            lwr100     = fitted100 - se100 * 1.96,
            upr100     = fitted100 + se100 * 1.96)
@@ -356,14 +360,14 @@ plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind, 
     if(pop_ind == "Totals"){
       
       # -- Used to determine y-axis
-      y_limits <- range(jurisdiction_dat$lwr, jurisdiction_dat$upr, jurisdiction_dat$covid19)
+      y_limits <- range(jurisdiction_dat$lwr, jurisdiction_dat$upr, jurisdiction_dat$covid_deaths)
       edays    <- weeks(2)
       
       # -- Making Viz
       p <- jurisdiction_dat %>%
         ggplot(aes(date, fitted, label=jurisdiction, color=jurisdiction)) +
         geom_line(size=1, show.legend = FALSE, data = jurisdiction_dat) +
-        geom_line(aes(date, covid19), lty=2, show.legend = FALSE, data = jurisdiction_dat) +
+        geom_line(aes(date, covid_deaths), lty=2, show.legend = FALSE, data = jurisdiction_dat) +
         geom_dl(method=list("last.points", fontfamily="Helvetica", fontface="bold", cex=1), data = last_dp) +
         ylab("Cumulative excess deaths") +
         xlab("Date") +
@@ -387,14 +391,14 @@ plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind, 
       }
     } else {
       # -- Used to determine y-axis
-      y_limits <- range(jurisdiction_dat$lwr100, jurisdiction_dat$upr100, jurisdiction_dat$covid19100)
+      y_limits <- range(jurisdiction_dat$lwr100, jurisdiction_dat$upr100, jurisdiction_dat$covid_deaths100)
       edays    <- weeks(2)
       
       # -- Making Viz
       p <- jurisdiction_dat %>%
         ggplot(aes(date, fitted100, color=jurisdiction)) +
         geom_line(size=1, show.legend = FALSE, data = jurisdiction_dat) +
-        geom_line(aes(date, covid19100), lty=2, show.legend = FALSE, data = jurisdiction_dat) +
+        geom_line(aes(date, covid_deaths100), lty=2, show.legend = FALSE, data = jurisdiction_dat) +
         geom_dl(aes(label=label), method=list("last.points", fontfamily="Helvetica", fontface="bold", cex=1), data = last_dp) +
         ylab("Cumulative excess deaths per 100,000") +
         xlab("Date") +
@@ -485,6 +489,7 @@ plot_excess_deaths <- function(dat, jurisdictions, start, end, ci_ind, pop_ind, 
   return(p)
 }
 
+
 ##
 plot_excess_v_covid <- function(dat, pc)
 {
@@ -508,7 +513,7 @@ plot_excess_v_covid <- function(dat, pc)
     group_by(jurisdiction) %>%
     filter(date == max(date)) %>%
     ungroup() %>%
-    mutate(difference = 100000 * (fitted - covid19) / population,
+    mutate(difference = 100000 * (fitted - covid_deaths) / population,
            diff_se = 100000 * se / population,
            diff_lwr = difference - 1.96 * diff_se,
            diff_upr = difference + 1.96 * diff_se) %>%

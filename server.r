@@ -22,7 +22,7 @@ shinyServer(function(input, output, session) {
   
   # -- US map percent change animation
   output$us_map <- renderPlot({
-    plot_us_map(percent_change = percent_change, us_map = us_map, temp_date = input$map_usa_date)
+    plot_us_map(percent_change = percent_change_states, us_map = us_map, temp_date = input$map_usa_date)
   })
   
   # -- US map excess deaths animation
@@ -42,7 +42,7 @@ shinyServer(function(input, output, session) {
   
   # -- Percent excess vs covid in US states
   output$excess_v_covid_usa <- renderPlot({
-    plot_excess_v_covid(dat = cdc_counts, pc = filter(percent_change, type == "weighted"))
+    plot_excess_v_covid(dat = cdc_counts, pc = percent_change_states)
   })
   
   # -- Percent excess vs covid in countires
@@ -52,17 +52,17 @@ shinyServer(function(input, output, session) {
 
   # -- Percent change plot for US states  
   output$percent_change_usa <- renderPlot({
-    plot_percent_change(dat = filter(percent_change, type == "weighted"), jurisdictions = input$state, start = input$range[1], end = input$range[2], ci_ind = input$`percent-change-states-CI`)
+    plot_percent_change(dat = percent_change_states, jurisdictions = input$state, start = input$range[1], end = input$range[2], ci_ind = input$`percent-change-states-CI`)
 })
   
   # -- Plot of worse states in USA
   output$percent_change_usa_worse <- renderPlot({
-    plot_worse_percent_change(dat = filter(percent_change, type == "weighted"), start = input$range[1], end = input$range[2])
+    plot_worse_percent_change(dat = percent_change_states, start = input$range[1], end = input$range[2])
   })
   
   # -- Plot of excess mortality of worse states in USA 
   output$excess_mortality_usa_worse <- renderPlot({
-    plot_worse_excess_deaths(dat = cdc_counts, pc = filter(percent_change, type == "weighted"), start = input$range[1], end = input$range[2])
+    plot_worse_excess_deaths(dat = cdc_counts, pc = percent_change_states, start = input$range[1], end = input$range[2])
   })
   
   # -- Percent change plot for countries
@@ -73,8 +73,7 @@ shinyServer(function(input, output, session) {
   # -- Percent change plot for both
   output$percent_change_both <- renderPlot({
     
-    both_dat <- percent_change %>%
-      filter(type == "weighted") %>%
+    both_dat <- percent_change_states %>%
       select_at(colnames(percent_change_countries)) %>%
       bind_rows(percent_change_countries)
     
@@ -90,8 +89,7 @@ shinyServer(function(input, output, session) {
   # -- Reactive dataset for excess deaths in both
   reactive_excess_deaths_both <- reactive({ 
     
-    tmp <- select(cdc_counts, -outcome_unweighted) %>%
-      bind_rows(world_counts)
+    tmp <- bind_rows(cdc_counts, world_counts)
     
     get_excess_deaths(dat = tmp, jurisdictions = input$both, start = input$range[1], end = input$range[2])
     })
@@ -115,13 +113,11 @@ shinyServer(function(input, output, session) {
   output$table <- DT::renderDataTable({
     
     # -- Excess deaths data
-    tmp <- select(cdc_counts, -outcome_unweighted) %>%
-      bind_rows(world_counts)
+    tmp <- bind_rows(cdc_counts, world_counts)
     ed <- get_excess_deaths(dat = tmp, jurisdictions = input$both, start = input$range[1], end = input$range[2])
     
     # -- Percent change data
-    pc <- percent_change %>%
-      filter(type == "weighted") %>%
+    pc <- percent_change_states %>%
       select_at(colnames(percent_change_countries)) %>%
       bind_rows(percent_change_countries)
     
